@@ -25,13 +25,13 @@ This repository contains a set of Julia Pluto notebooks that can be run in succe
 	
 3. Run the analysis pipeline:
 	from pathto/SteinbockProject/AkerselvaCytometry/
-	- To run them all at once
+	- To open pluto
 	```
-	julia run_analysis.jl
+	julia 00_runPluto.jl
 	```
 	
 	- To run them notebook by notebook and generate images, in julia terminal at `pathto/SteinbockProject/AkerselvaCytometry/`
-	julia```
+	```
 	using pluto
 	Pluto.run()	
 	```
