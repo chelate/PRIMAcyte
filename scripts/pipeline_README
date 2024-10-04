@@ -1,0 +1,83 @@
+This is a complete description of the pipeline
+
+1. unpack, segment and measure cells
+	
+	Open Docker
+	
+	In terminal in the root folder
+		./scripts ./set_steinbock
+			# set the terminal and preprocess images
+		steinbock preprocess imc panel
+		steinbock preprocess imc images --hpf 50	
+			# unpack the images with (local) hot pixel filtering threshold of 50
+	
+	
+	Next the panel needs to be corrected and put into cannonical format, and the images need to be segmented
+		julia panel_cleaner.jl 
+			# this is where we define the segmentation inputs
+		steinbock segment mesmer -minmax
+			# Mesmer is using Tensorflow from 2020 and requires AVX (intel processor). 
+			# There is no support for the newest Macs.
+			
+	Measure the cells and export a csv file
+	In terminal, in the root fold (Hyperion/MCL) run the following 
+		steinbock measure regionprops
+		steinbock measure intensities
+		steinbock export csv intensities regionprops -o cells.csv
+		cd data (optional)
+			rm -r regionprops
+			rm -r regionprops
+	
+	cells.csv is now in the MCL/data!
+		
+2. Augment the csv file for processing
+	Train Illastik
+		Categories: pixel categories: normal, dark, void
+			output file format should look like 
+			format: .tiff
+			{dataset_dir}/../ilastik_labels/{nickname}_{result_type}.tiff
+	
+	Move to data a csv file named: image_metadata.csv
+	
+	julia append_metadata.jl
+		-> saves cells_metadata.csv
+		
+	creates the following columns (set by metadata)
+	- patient (patient id in the trial)
+	- img_number
+	- tma block
+	- location
+	- probabilities from the illastiks
+	
+	Cells are filtered by quality based on nearest neighbor consensus of p_normal
+	Filtered results are exported to cells_metadata.csv
+		Number of cells: just shy of 1.5 million
+	
+3. Remove outliers, remove  batch correct
+	julia cell_corrections.jl
+		-> saves c1.csv
+		
+	Batch correcting twice, possibly slightly improved results, but noise remains.
+	Removed outliers: Seems to converge faster without the outliers
+	2024-07-04 Added in noise subtraction 
+	
+	
+4. cluster and annotate cells
+	julia cell_annotations.jl
+		-> best cluster saved in scripts/data/kmeans_result.jld2
+	
+	julia cluster_visualization.jl
+		view results from cell_annotations and pick out clusters
+		
+5. 
+		
+
+Notes: 
+
+In step 1: Possible errors resulting from having the files not actually downloaded from dropbox. Make sure you are in the right place, docker is running, and all the files are synced and local to your machine.
+	Error measuring regionprops in img/IS_23_009_LU_MCL3B_007.tiff: [Errno 35] Resource deadlock avoided
+	
+State dependence can emerge from the saved long-running caluclations 
+
+
+
