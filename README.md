@@ -10,7 +10,7 @@ This repository contains a set of Julia Pluto notebooks that can be run in succe
 	In terminal
 	```
 	cd pathto/SteinbockProject/
-	git clone https://github.com/chelate/AkerselvaCytometry.git
+	git clone https://github.com/chelate/AkerselvaCytometry
 	cd AkerselvaCytometry
 	```
 	
