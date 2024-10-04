@@ -238,13 +238,14 @@ end
 
 # ╔═╡ 751b682c-ff2d-4226-aa95-8fcb4db451e0
 let fig = Figure()
-	ax = Axis(fig[1,1]; xlabel = "# of cells in image", ylabel = "CDF")
+	ax = Axis(fig[1,1]; xlabel = "# of cells in ROI", ylabel = "CDF",title = "ROI inclusion criteria")
 	ylims!(ax,-0.00,1.00)
 	xlims!(ax,00,10000)
 	lines!(ax,
 		sort([sum(df_image.cell_included) for df_image in 	groupby(df_joined,:Image)]),
 		range(0,1,length(groupby(df_joined,:Image))); linewidth = 3)
 	vlines!(ax,[minimum_cells]; color = :red, label = "minimum cutoff")
+	save(joinpath(@__DIR__,"plots","01_included_ROIs.pdf"),fig)
 	fig
 end
 
