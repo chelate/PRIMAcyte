@@ -1,6 +1,6 @@
 # AkerselvaCytometry
 A collection of Julia notebooks designed to get your IMC analysis off and running.
-Assumes that `.mcd` files  have already been unpacked by the Steinbeck docker tool and segmented using deepcell/mesmer or CellPose
+Assumes that `.mcd` files  have already been unpacked by the Steinbeck docker tool and segmented using deepcell/mesmer or CellPose.
 
 This repository contains a set of Julia Pluto notebooks that can be run in succession to perform data analysis.
 
@@ -37,6 +37,11 @@ This repository contains a set of Julia Pluto notebooks that can be run in succe
 	```
 	
 ## Notebooks
-- `01_data_cleaning.jl`: Cleans the raw data.
-- `02_feature_extraction.jl`: Extracts features from the cleaned data.
-- `03_model_training.jl`: Trains a model on the extracted features.
+- `01_QualityControl.jl`: Cleans the raw data, removes low quality cells and images, attatches patient identifiers / metadata such as tme block
+	Optional: folder called lastik_labels can be used to provide probabilities to filter out low quality regions.
+	
+- `02_BatchCorrections.jl`: Extracts features from the cleaned data. Generates a new c1.csv in AkerselvaPipeline/data that is appropriate for use in CytoBank or similar.
+
+- `03_CelltypeAnnotations.jl`: Clusters cells and annotates them according to a binary tree. The clustering is saved in AkerselvaPipeline/data for stability.  
+
+- `04_CelltypeAnnotations.jl`: Clusters cells and annotates them according to a binary tree. The clustering is saved in AkerselvaPipeline/data for stability.  

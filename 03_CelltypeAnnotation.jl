@@ -41,9 +41,6 @@ end
 # ╔═╡ aa8273cf-8c5f-41b4-8cf0-91bcc60aa30f
 PlutoUI.TableOfContents()
 
-# ╔═╡ 8a1ecc6f-e1b6-4d21-89ba-0c4828339ddc
-DATA_PATH = joinpath(@__DIR__,"..","data")
-
 # ╔═╡ 72dfe345-52c4-4611-9664-6f66abc5468f
 md"""
 # Get the data
@@ -54,7 +51,7 @@ A prefactor of 2 is chosen to spread out the distribution as much as possible on
 
 # ╔═╡ 351bb231-931f-4759-8005-15ad991f9a48
 begin
-	df = CSV.File(joinpath(DATA_PATH,"c1.csv")) |> DataFrame;
+	df = CSV.File(joinpath(@__DIR__,"data","c1.csv")) |> DataFrame;
 end
 
 # ╔═╡ 26bbb93e-5ca9-47dd-a7df-17954063e0f6
@@ -73,7 +70,7 @@ begin
 		hist!(ax, yy, bins = 100)
 		X[jj,:] .= yy
 	end
-	save(joinpath(@__DIR__,"plots","transformed_histograms.pdf"),g)
+	save(joinpath(@__DIR__,"plots","03_transformed_histograms.pdf"),g)
 	g
 end
 
@@ -92,7 +89,7 @@ readdir(joinpath(@__DIR__,"data"))
 # ╔═╡ 60d92fda-cb7c-4608-a33f-3fb513c9ee24
 # long running calculation boilerplate
 if "kmeans_result.jld2" in readdir(joinpath(@__DIR__,"data")) # check if result is saved
-	JLD2.@load joinpath(@__DIR__,"data", "kmeans_result.jld2") kmeans_result # load it if it is
+	JLD2.@load joinpath(@__DIR__,"data", "kmeans_result.jld2") kmeans_result # load it if it exists
 else # otherwise run 10 kmeans and choose the best one.
 	# Parallel implementation
 	kmeans_result = let results = ThreadPools.qmap(1:10) do _
@@ -105,8 +102,9 @@ end
 
 # ╔═╡ 4bc494ef-71f4-4c7f-9567-9b84e737e374
 let a = assignments(kmeans_result) # get the assignments of points to clusters
-	bp1 = barplot(sort(counts(a) ./ sum(counts(a))); gap = 0, axis = (; limits = (nothing,(0.0,0.02)),  xlabel = "Cluster", ylabel = "Cell fraction"))
-	save(joinpath(@__DIR__,"plots","kmeans_membership.pdf"),bp1)
+	global fractions = counts(a) ./ sum(counts(a))
+	bp1 = barplot(sort(fractions); gap = 0, axis = (; limits = (nothing,(0.0,0.015)), title = "Cluster distribution",  xlabel = "Cluster", ylabel = "Cell fraction"))
+	save(joinpath(@__DIR__,"plots","03_cluster_membership.pdf"),bp1)
 	bp1
 end
 
@@ -114,6 +112,11 @@ end
 md"""
 # Cluster Labeling
 The clusters that result from the kmeans iterations must now be assigned to different bins based on their mean expression patterns. To do this we recursively divide bin our clusters via user-chosen cuts on hierarchial clustering orders.
+"""
+
+# ╔═╡ d0efe454-be48-4f37-ae91-9f28487c3171
+md"""
+## Definition for a CellType node
 """
 
 # ╔═╡ 05a2845c-b64f-4ba3-802c-d8cbe690b33a
@@ -125,6 +128,11 @@ mutable struct CellType
 	right::Int  # the right bounds used to partition the children (inclusive min and max of the included on left node)
 	color::Any
 end
+
+# ╔═╡ 43d7251b-ed58-411e-a08d-27d7638ec185
+md"""
+## Color Scheme
+"""
 
 # ╔═╡ aacb42c6-9c35-4647-b4fa-97e6693b923b
 cs = ColorSchemes.tableau_20
@@ -150,6 +158,7 @@ color_dictionary = Dict(
 # ╔═╡ b0a5bfb7-4fdf-4722-b71e-e26b24e2042e
 md"""
 ## Tree definition
+Here we define the tree topology
 """
 
 # ╔═╡ ef9b9ae2-8d52-4d16-af54-9c76b46dc4f1
@@ -211,16 +220,6 @@ md"""
 md"""
 ## Tree diagnostics and code
 """
-
-# ╔═╡ 7fa3b221-9a06-4fc9-bab4-ba82adfb6998
-begin
-# these are the fractions in each cell type
-	fractions = counts(kmeans_result) ./ sum(counts(kmeans_result))
-	plt_11 = barplot(sort(fractions); axis = Dict(:xlabel => "cluster", :ylabel => "membership probability"), gap = 0.0)
-	save(joinpath(@__DIR__,"plots","memberships.pdf") 
- , plt_11)
-	plt_11
-end
 
 # ╔═╡ c5bd0c23-4eb2-4caf-b5b6-56a677e5f950
 function cluster(cluster_node::CellType; scaling_exponent = 1.0)
@@ -417,15 +416,15 @@ begin
 	children_2 	= ("CD3+","CD3-")
 	scale_2	= 
 		Dict("CD3"=>6.5, "CD20"=> 2.5, "CD19"=> 2, "CD7"=>5, "CD45RA"=> 3, "CD45RO" =>3 ,"CD68"=>5.5,"CD4"=> 5, "CD8a"=> 5)
-	@bind lines_2 boundinglines(2, [169,199])
+	@bind lines_2 boundinglines(2, [172,199])
 end
 
 # ╔═╡ e3567477-f45a-41ff-9254-88862b58ffc0
 begin
 	children_5 	= ("CD68+","CD68-")
 	scale_5	= 
-		Dict("CD3"=>0, "CD20"=> 3, "CD19"=> 2, "CD66b"=> 2, "GrzB" =>2 ,"CD68"=>4.7,"CD11c"=>3, "CD11b"=>4,"Collagen"=>2, "CD163"=>2, "CD16"=>2,"CD21"=>1, "FOXP3"=>2,"CD4"=> 0, "CD8a"=> 0, "SOX11" => 1,"CD34"=>1, "Ki67"=>1, "CyclinD1"=>1, "TIM3"=>-1, "TIGIT" => -1,"PD1" => -1,"VISTA" => -2)
-	@bind lines_5 boundinglines(5,[114,154])
+		Dict("CD3"=>0, "CD20"=> 2, "CD19"=> 2, "CD66b"=> 2, "GrzB" =>2 ,"CD68"=>4.7,"CD11c"=>3, "CD11b"=>4,"Collagen"=>2, "CD163"=>2, "CD16"=>2,"CD21"=>1, "FOXP3"=>2,"CD4"=> 0, "CD8a"=> 0, "SOX11" => 1,"CD34"=>1, "Ki67"=>1, "CyclinD1"=>1, "TIM3"=>-1, "TIGIT" => -1,"PD1" => -1,"VISTA" => -2)
+	@bind lines_5 boundinglines(5,[1,14])
 end
 
 # ╔═╡ 911e29ef-bb39-46da-8d5f-7cfa06dca648
@@ -595,7 +594,7 @@ end
 
 # ╔═╡ 591b2c61-3ae3-4c70-9af5-6ef76fdfe611
 let tp = treeplot(cluster_tree)
-	save(joinpath(@__DIR__,"plots","new_kmeans_tree.pdf"), tp)
+	save(joinpath(@__DIR__,"plots","03_annotation_tree.pdf"), tp)
 	tp
 end
 
@@ -615,7 +614,7 @@ dotplot(cluster_tree,2, x = "CD4", y = "CD8a")
 node_view(cluster_tree,5)
 
 # ╔═╡ 7a2b50ee-892c-45c6-b9f8-6abcab8aba8f
-dotplot(cluster_tree, 5, x = "CD20", y = "CD68")
+dotplot(cluster_tree, 5, x = "CD163", y = "CD68")
 
 # ╔═╡ 68b5d2a4-b522-4c5e-a8a5-6f961c5ac385
 node_view(cluster_tree,10)
@@ -655,9 +654,6 @@ node_view(cluster_tree,2*185)
 
 # ╔═╡ a91c9fb7-461a-4aa7-8cd4-599702042438
 node_view(cluster_tree,371)
-
-# ╔═╡ ed8bd87d-2f1e-47b0-aedf-5065869c3c68
-save(joinpath(@__DIR__,"plots","tumor_subclusters.pdf"), node_view(cluster_tree,2*371+1))
 
 # ╔═╡ 3a80f8c8-c901-4cb4-b253-e7972fef562d
 node_view(cluster_tree,4)
@@ -2330,7 +2326,6 @@ version = "3.5.0+0"
 # ╔═╡ Cell order:
 # ╠═d7da988c-2247-11ef-29ce-3f6059d8398e
 # ╠═aa8273cf-8c5f-41b4-8cf0-91bcc60aa30f
-# ╠═8a1ecc6f-e1b6-4d21-89ba-0c4828339ddc
 # ╟─72dfe345-52c4-4611-9664-6f66abc5468f
 # ╠═351bb231-931f-4759-8005-15ad991f9a48
 # ╠═26bbb93e-5ca9-47dd-a7df-17954063e0f6
@@ -2340,13 +2335,15 @@ version = "3.5.0+0"
 # ╠═72eb6dac-533f-43f0-97f0-def102d7d442
 # ╠═60d92fda-cb7c-4608-a33f-3fb513c9ee24
 # ╠═4bc494ef-71f4-4c7f-9567-9b84e737e374
-# ╠═fd06254f-0ee9-439b-ac88-2077140f1e40
+# ╟─fd06254f-0ee9-439b-ac88-2077140f1e40
+# ╟─d0efe454-be48-4f37-ae91-9f28487c3171
 # ╠═05a2845c-b64f-4ba3-802c-d8cbe690b33a
 # ╠═b9955b07-6c13-4ad8-ad32-8857e2516cba
+# ╟─43d7251b-ed58-411e-a08d-27d7638ec185
 # ╠═aacb42c6-9c35-4647-b4fa-97e6693b923b
 # ╠═9f351f31-72a5-420e-acdf-e17da011fcdd
 # ╠═591b2c61-3ae3-4c70-9af5-6ef76fdfe611
-# ╠═b0a5bfb7-4fdf-4722-b71e-e26b24e2042e
+# ╟─b0a5bfb7-4fdf-4722-b71e-e26b24e2042e
 # ╠═1c906127-b043-49e0-ac16-bdef4764f119
 # ╠═7fbe6a16-6050-4e2d-9c8f-7e18ce960a69
 # ╠═da7dcf1c-0433-456e-9a6f-58c0f7e97db3
@@ -2384,7 +2381,6 @@ version = "3.5.0+0"
 # ╠═c74d1883-cf1c-4a87-b633-374a071f19ea
 # ╠═986b6b97-c0a4-41ef-acdb-6583e71b041c
 # ╠═a91c9fb7-461a-4aa7-8cd4-599702042438
-# ╠═ed8bd87d-2f1e-47b0-aedf-5065869c3c68
 # ╠═cbd58cc9-fdb5-4b42-9222-eedd01e7db42
 # ╠═7f6a63c5-560b-4921-94da-f81f58240224
 # ╠═3a80f8c8-c901-4cb4-b253-e7972fef562d
@@ -2405,7 +2401,6 @@ version = "3.5.0+0"
 # ╠═5737d295-dafd-4d9b-8e5d-4a19c9248188
 # ╠═e6e529e2-c892-4643-a39b-0ebc720fab03
 # ╠═bd95d563-48d1-409b-bff9-bdc4d253d82f
-# ╠═7fa3b221-9a06-4fc9-bab4-ba82adfb6998
 # ╠═c5bd0c23-4eb2-4caf-b5b6-56a677e5f950
 # ╠═bbc6643a-97af-4333-be88-bcca124b7de7
 # ╠═80f6bdae-f023-4e32-a712-a819d133204d

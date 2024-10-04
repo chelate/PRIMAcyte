@@ -1,2 +1,4 @@
 # Ignore macOS .DS_Store files
 .DS_Store
+logs/*       # Ignore all files inside the logs directory
+!logs/.gitkeep  # But don't ignore the .gitkeep file to retain the directory structure

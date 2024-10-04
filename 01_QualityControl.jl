@@ -33,9 +33,10 @@ md"""
 # Attatch Metadata
 
 Metadata from `image_metadata.csv` is attatched to cells.csv. We only keep images that have an entry in `image_metadata`
-If an image is missing in the metadata, then it is dropped from the data.
 
-!! Make sure  that all the images you want to analye have metadata associated with them.
+
+If an image is missing in the metadata, then it is dropped from the data. 
+  - !!! Make sure  that all the images you want to analye have metadata associated with them.
 
 We export also img_number.csv which is useful for cytobank interfacing.
 """
@@ -238,13 +239,14 @@ end
 
 # ╔═╡ 751b682c-ff2d-4226-aa95-8fcb4db451e0
 let fig = Figure()
-	ax = Axis(fig[1,1]; xlabel = "# of cells in ROI", ylabel = "CDF",title = "ROI inclusion criteria")
-	ylims!(ax,-0.00,1.00)
-	xlims!(ax,00,10000)
+	ax = Axis(fig[1,1]; xlabel = "# of HQ cells in ROI", ylabel = "CDF",title = "ROI inclusion criteria", xscale = log10)
+	ylims!(ax,-0.00,1.0)
+	xlims!(ax,10,5e4)
 	lines!(ax,
 		sort([sum(df_image.cell_included) for df_image in 	groupby(df_joined,:Image)]),
 		range(0,1,length(groupby(df_joined,:Image))); linewidth = 3)
-	vlines!(ax,[minimum_cells]; color = :red, label = "minimum cutoff")
+	vlines!(ax,[minimum_cells]; color = :red)
+	text!(ax,minimum_cells,0.5; text = "minimum  = $(round(Int,minimum_cells)) cells", color = :black, rotation= pi/2, align = (:left,:top))
 	save(joinpath(@__DIR__,"plots","01_included_ROIs.pdf"),fig)
 	fig
 end
@@ -269,7 +271,7 @@ md"""
 included_rows = df_joined.image_included .&& df_joined.cell_included
 
 # ╔═╡ db579f30-19b9-43f3-b69e-da846e2f895b
-CSV.write(joinpath(DATA_PATH,"cells_metadata.csv"),
+CSV.write(joinpath(@__DIR__,"data","cells_metadata.csv"),
 	df_joined[included_rows,Not(:cell_included,:image_included)])
 
 # ╔═╡ 3f413d76-f90d-4c9f-8e9a-bf752a09ed73
@@ -278,7 +280,7 @@ md"""
 """
 
 # ╔═╡ 07742983-771d-4da4-a5bb-71e567315e0c
-CSV.write(joinpath(DATA_PATH,"img_number.csv"),
+CSV.write(joinpath(@__DIR__,"data","img_number.csv"),
 	select(
 		DataFrame(ii[1,:] for ii in groupby(df_joined,:Image)), ["Image","img_number","Patient","tma_block"]))
 
