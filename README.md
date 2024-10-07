@@ -44,4 +44,10 @@ This repository contains a set of Julia Pluto notebooks that can be run in succe
 
 - `03_CelltypeAnnotations.jl`: Clusters cells and annotates them according to a binary tree. The clustering is saved in AkerselvaPipeline/data for stability.  
 
-- `04_CelltypeAnnotations.jl`: Clusters cells and annotates them according to a binary tree. The clustering is saved in AkerselvaPipeline/data for stability.  
+- `04_ImageViewer.jl`: View images and save colorschemes
+
+## To do
+  - `05_Microenvironments.jl`
+  - `06_PatientData.jl`
+  - A1_tSNE.jl
+

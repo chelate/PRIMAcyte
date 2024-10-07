@@ -1,6 +1,5 @@
-# Ignore macOS .DS_Store files
 .DS_Store
-plots/*       # Ignore all files inside the logs directory
-!plots/.gitkeep  # But don't ignore the .gitkeep file to retain the directory structure
-data/*       # Ignore all files inside the logs directory
-!data/.gitkeep  # But don't ignore the .gitkeep file to retain the directory structure
+plots/*       
+!plots/.gitkeep
+data/*       
+!data/.gitkeep
