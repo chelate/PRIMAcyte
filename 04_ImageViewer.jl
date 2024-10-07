@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.46
+# v0.19.41
 
 using Markdown
 using InteractiveUtils
@@ -30,16 +30,9 @@ begin
 	using JLD2
 	import HypertextLiteral: @htl
 	import Statistics: quantile
+	import LinearAlgebra
+	import CairoMakie
 end
-
-# ╔═╡ 17f2f17a-8b78-4696-9a50-b3f584668c6d
-using Statistics
-
-# ╔═╡ e4f68fd5-df48-416e-9ccd-9146bb007351
-import LinearAlgebra
-
-# ╔═╡ ae3fe445-5376-4505-87dd-68f4fd841bb4
-import CairoMakie
 
 # ╔═╡ cbe74fb5-972f-4127-a6c7-0c50cf8522cb
 function Base.show(io::IO, mime::MIME"image/png",  img::AbstractMatrix{C}) where {C<:Colorant}
@@ -69,6 +62,111 @@ main {
 
 # ╔═╡ 9fcdd12a-cd55-47b4-a98a-6d1c84f4b436
 TableOfContents()
+
+# ╔═╡ 7bce7789-58d5-49e7-b0cc-f38f2829f0db
+begin
+	JLD2.@load joinpath(@__DIR__,"data","cluster_labels.jld2") labels cols df_clustered
+	delete!(cols,"Bright")
+	delete!(cols,"Dark")
+	md"""
+	# load cell information
+	
+		- labels (cluster_index => string_name)
+		- cols (string_name => RGB)
+		- df (filtered data frame, does not include all segmented objects))
+
+	logic is that the mask tiff value will be zero for the unsegmented regions (i.e. balack)
+	
+	`ifelse(i == 0,
+			RGB(0.0),
+			get(cell_coloring,i, unknown_color))`
+	"""
+end
+
+# ╔═╡ 73279267-ba04-47da-9bba-81a1bc26269c
+md"""
+# Marker Colors
+"""
+
+# ╔═╡ 9e355daf-ada9-4519-b186-2512a63a6747
+@bind color_update Button("update colors")
+
+# ╔═╡ 714ed9c9-7307-482c-b9dc-5c5027aae3e0
+md"""
+# Saving / loading colors
+"""
+
+# ╔═╡ f501dad3-6a8f-43a6-9931-75cdc7451769
+@bind update_save Button("load / delete color scheme")
+
+# ╔═╡ ffd766c6-e030-484b-a769-0bd3bad19fa4
+md"""
+activate the definition cell above to load the scheme.
+"""
+
+# ╔═╡ 50892ac6-3480-4f1b-9f9b-bf60753989c4
+@bind save_button Button("save color scheme")
+
+# ╔═╡ a79670ce-9a64-41a8-939f-4cb4e6a84dfe
+md"""
+## Choose Patient
+"""
+
+# ╔═╡ c0170387-a1d1-4f17-a41c-ae3875c2034a
+@bind cellbits MultiCheckBox(["cells","save image"])
+
+# ╔═╡ 0aecf292-b442-4b9a-b690-06e061a6af50
+@bind value_scale Slider(range(1,0,20))
+
+# ╔═╡ ba317e1a-c67c-4f5a-b62a-56d9c0f0df86
+md"""
+# Zoom Box
+"""
+
+# ╔═╡ ce169cd6-91ab-4efb-9915-88d09f36038c
+@bind maskbits MultiCheckBox(["masks"])
+
+# ╔═╡ 0c29afcf-c687-4776-b870-84583727592c
+md"""
+# Highlight Clusters
+"""
+
+# ╔═╡ da0cc366-5471-4f93-bc6d-74739910cffb
+@bind highlighted MultiCheckBox(sort(unique(df_clustered.cluster_index)))
+
+# ╔═╡ 7d73f953-4365-433d-b7f4-0716c79805f0
+
+
+# ╔═╡ b558f09a-9468-4b49-915b-a614ee009618
+md"""
+# _
+
+# The code
+"""
+
+# ╔═╡ f799657d-681e-42a2-9261-f1ab1c11421f
+begin 
+	highlighted_counts = Dict(first(df_image.Patient) => sum(in(ci, highlighted) for ci in df_image.cluster_index) for df_image in groupby(df_clustered,:Image) )
+	total_counts = Dict(first(df_image.Patient) => sum( 1 for ci in df_image.cluster_index) for df_image in groupby(df_clustered,:Image) )
+end
+
+# ╔═╡ 4d9deb1e-77e6-44ca-9d7d-fbb7101e4f39
+md"""
+### Get the targets from the panel
+"""
+
+# ╔═╡ 718eb743-7b7c-46dd-890b-18a51240db2e
+get_bounds(x,y,width,height) = 
+	(range(extrema(round.(Int, [y, y+height]))...),range(extrema(round.(Int,[x, x+width]))...))
+
+# ╔═╡ 86841954-e590-45a9-936b-7bd653109f4c
+patient_image_dict = Dict(ii[1,"Patient"]=> ii[1,"Image"] for ii in groupby(df_clustered,:Image))
+
+# ╔═╡ 39f58298-320a-4e7e-a170-7516d85149d4
+@bind selected_patient  Select(sort(collect(keys(patient_image_dict)))) #Select((first∘splitext).(image_order)) 
+
+# ╔═╡ 08358c11-cf3f-49a1-bde9-f143899c1557
+patient_img_dict = Dict(ii[1,"img_number"] => ii[1,"Patient"] for ii in groupby(df_clustered,:Image))
 
 # ╔═╡ 3daf7f1c-4687-468d-80f8-03ede23b39e8
 function encode_img_matrix(img_matrix::Matrix{RGB{Float64}})
@@ -154,14 +252,9 @@ end
 	"""
 end
 
-# ╔═╡ 4d9deb1e-77e6-44ca-9d7d-fbb7101e4f39
+# ╔═╡ 6eac3e81-d949-4a59-ae77-0c16a7f29aaa
 md"""
-# Get the targets from the panel
-"""
-
-# ╔═╡ b1046803-6071-4542-a501-30575b109400
-md"""
-## color of unknown cells, or of the singled out clusters
+### unknown color and highlighted clusters
 """
 
 # ╔═╡ 339eb3c7-40de-4a5d-82b2-c571cf421288
@@ -170,179 +263,18 @@ const unknown_color = RGB(.3)
 const highlight = RGB(0.4,0.1,0.1)
 end
 
-# ╔═╡ 0c29afcf-c687-4776-b870-84583727592c
-md"""
-# highlight individual clusters
-"""
-
-# ╔═╡ 7bce7789-58d5-49e7-b0cc-f38f2829f0db
-begin
-	JLD2.@load joinpath(@__DIR__,"data","cluster_labels.jld2") labels cols df_clustered
-	delete!(cols,"Bright")
-	delete!(cols,"Dark")
-	md"""
-	# load cell information
-	
-		- labels (cluster_index => string_name)
-		- cols (string_name => RGB)
-		- df (filtered data frame, does not include all segmented objects))
-
-	logic is that the mask tiff value will be zero for the unsegmented regions (i.e. balack)
-	
-	`ifelse(i == 0,
-			RGB(0.0),
-			get(cell_coloring,i, unknown_color))`
-	"""
-end
-
-# ╔═╡ da0cc366-5471-4f93-bc6d-74739910cffb
-@bind highlighted MultiCheckBox(sort(unique(df_clustered.cluster_index)))
-
-# ╔═╡ f799657d-681e-42a2-9261-f1ab1c11421f
-begin 
-	highlighted_counts = Dict(first(df_image.Patient) => sum(in(ci, highlighted) for ci in df_image.cluster_index) for df_image in groupby(df_clustered,:Image) )
-	total_counts = Dict(first(df_image.Patient) => sum( 1 for ci in df_image.cluster_index) for df_image in groupby(df_clustered,:Image) )
-end
-
-# ╔═╡ 718eb743-7b7c-46dd-890b-18a51240db2e
-get_bounds(x,y,width,height) = 
-	(range(extrema(round.(Int, [y, y+height]))...),range(extrema(round.(Int,[x, x+width]))...))
-
-# ╔═╡ 23545893-e290-46a8-b131-b2b013bf3c77
-md"""
-still to do:
-
-	- add file based histograms from cell_drawing.jl
-	- add cluster highlighing feature to show a a particular cluster
-	- show clustere in histogram
-	- print things a little better
-"""
-
-# ╔═╡ 86841954-e590-45a9-936b-7bd653109f4c
-patient_image_dict = Dict(ii[1,"Patient"]=> ii[1,"Image"] for ii in groupby(df_clustered,:Image))
-
-# ╔═╡ 08358c11-cf3f-49a1-bde9-f143899c1557
-patient_img_dict = Dict(ii[1,"img_number"] => ii[1,"Patient"] for ii in groupby(df_clustered,:Image))
-
-# ╔═╡ 9b6085f3-83ab-4a4b-9734-a837204ee5da
-let labs = sort(collect(keys(cols)))
-	push!(labs,"Unknown")
-	swatches = [CairoMakie.PolyElement(color = get(cols,l,unknown_color), strokewidth = 0) for l in labs]
-	f = CairoMakie.Figure(size = (500,250))
-	CairoMakie.Legend(f[1, 1], swatches, labs, patchsize = (35, 35), rowgap = 10, nbanks = 3, framevisible = false)
-	save(joinpath(@__DIR__,"plots","legend.pdf"), f)
-	f
-end
-
-# ╔═╡ 93f1dc9b-8379-4e12-a680-70cef029e6e4
-#= begin
-	image_count_dict = Dict(
-		first(image.Patient) => celltype_count_dict(image.cluster_index,labels) 
-		for image in groupby(df_clustered,:Image) 
-		# if the number of identified cells is above a certain threshold.
-		if sum(values(celltype_count_dict(image.cluster_index,labels))) > 3000
-		)
-	img_count_dict = Dict(
-		first(image.img_number) => celltype_count_dict(image.cluster_index,labels) 
-		for image in groupby(df_clustered,:Image) 
-		# if the number of identified cells is above a certain threshold.
-		if sum(values(celltype_count_dict(image.cluster_index,labels))) > 3000
-		)
-	delete!.(values(image_count_dict), "Dark")
-	delete!.(values(image_count_dict), "Bright")
-	
-	image_order = sort(collect(keys(image_count_dict)), by = x-> image_count_dict[x]["B/Tumor"]/ sum(values(image_count_dict[x])))
-	celltype_order = sort(collect(keys(first(image_count_dict)[2])))[[2,1,3,4,5,6,7,8,9,10,11,12]]
-	let fig = prob_plot(image_count_dict, celltype_order, image_order)
-			CairoMakie.save(joinpath(dirname(DATA_PATH),"cell_types","celltype_fractions.pdf"),fig)
-		fig
-	end
-	
-end =#
-
-# ╔═╡ 73279267-ba04-47da-9bba-81a1bc26269c
-md"""
-# Choose Patient
-"""
-
-# ╔═╡ 9e355daf-ada9-4519-b186-2512a63a6747
-@bind color_update Button("update colors")
-
-# ╔═╡ 714ed9c9-7307-482c-b9dc-5c5027aae3e0
-md"""
-# Saving / loading colors
-"""
-
-# ╔═╡ f501dad3-6a8f-43a6-9931-75cdc7451769
-@bind update_save Button("load / delete color scheme")
-
-# ╔═╡ ffd766c6-e030-484b-a769-0bd3bad19fa4
-md"""
-activate the definition cell above to load the scheme.
-"""
-
-# ╔═╡ 31c82837-417a-4da4-b713-448baaf377ea
-@bind colorscheme_name PlutoUI.combine() do Child
-	md"""
-	name $(Child(TextField(default="mycolors")))
-	"""
-end
-
-# ╔═╡ 50892ac6-3480-4f1b-9f9b-bf60753989c4
-@bind save_button Button("save color scheme")
-
-# ╔═╡ 39f58298-320a-4e7e-a170-7516d85149d4
-@bind selected_patient  Select(sort(collect(keys(patient_image_dict)))) #Select((first∘splitext).(image_order)) 
-
-# ╔═╡ d6fbd6f8-fee6-4abd-b8e6-912e84f39954
-selected_image = splitext(patient_image_dict[selected_patient])[1]
-
-# ╔═╡ 434a387a-54ab-4147-89d2-e7fed1d7b0f4
-	cell_coloring = Dict{Int,RGB{Float64}}(
-		c=> if ci in highlighted
-			highlight
-		else
-			get(cols, get(labels, ci, 0) ,unknown_color)  
-		end
-			for (c,ci) in eachrow(df_clustered[df_clustered.Image .== selected_image*".tiff", [:Object,:cluster_index]]))
-
-# ╔═╡ c0170387-a1d1-4f17-a41c-ae3875c2034a
-@bind cellbits MultiCheckBox(["cells"])
-
 # ╔═╡ 8272ba6b-b303-43ad-8b3f-a96e28e387e0
 begin 
 	labs = sort(collect(keys(cols)))
 	push!(labs,"Unknown")
 	swatches = [CairoMakie.PolyElement(color = get(cols,l,unknown_color), strokewidth = 0) for l in labs]
-	f = CairoMakie.Figure(size = (500,250))
-	CairoMakie.Legend(f[1, 1], swatches, labs, patchsize = (35, 35), rowgap = 10, nbanks = 3, framevisible = false)
-	#save(joinpath(dirname(DATA_PATH),"cell_types","legend.pdf"), f)
-	f
+	cell_type_legend = CairoMakie.Figure(size = (500,250))
+	CairoMakie.Legend(cell_type_legend[1, 1], swatches, labs, patchsize = (35, 35), rowgap = 10, nbanks = 3, framevisible = false)
+	cell_type_legend
 end
 
-# ╔═╡ 0aecf292-b442-4b9a-b690-06e061a6af50
-@bind value_scale Slider(range(1,0,20))
-
-# ╔═╡ d36a8044-b12d-4eb3-95a8-7f9b2ecc6fa7
-# save(joinpath(FIG_PATH,"mostly_tumor_stuff.png"),color_img(selected_image, cc; value_scale = value_scale))
-# save(joinpath(FIG_PATH,"mostly_tumor_stuff_legend.svg"), color_scheme_legend("scheme", cc; value_scale = 1.0) )
-# save(joinpath(FIG_PATH,"mostly_tumor_stuff_cells.png"), map(i -> ifelse(i == 0, RGB(0.0), get(cell_coloring,i, unknown_color)), getmask_tiff(selected_image)) )
-
-# ╔═╡ ba317e1a-c67c-4f5a-b62a-56d9c0f0df86
-md"""
-# Display
-"""
-
-# ╔═╡ ce169cd6-91ab-4efb-9915-88d09f36038c
-@bind maskbits MultiCheckBox(["masks"])
-
 # ╔═╡ 4cb153af-c1a0-47f5-a3d1-dfaa72f1c8b5
-f # rename variable
-
-# ╔═╡ b558f09a-9468-4b49-915b-a614ee009618
-md"""
-# The code
-"""
+cell_type_legend # rename variable
 
 # ╔═╡ 4c1a3c3b-f716-4437-8da7-0539673755e5
 DATA_PATH = joinpath(dirname(@__DIR__),"data")
@@ -360,6 +292,8 @@ begin
 end
 
 # ╔═╡ 43d75174-d346-40cf-ab10-40c50adf5b4f
+begin
+update_save
 @bind hsv PlutoUI.combine() do Child
 	md"""
 	H $(Child(Slider(0:30:360))
@@ -371,51 +305,114 @@ end
 	) 
 	"""
 end
+end
 
 # ╔═╡ 85c3cc24-b7c0-41cf-a32a-9094d00d2304
 IMG_PATH = joinpath(DATA_PATH,"img")
 
 # ╔═╡ 812948b4-0efe-499c-be2f-3a1a26002ff0
-FIG_PATH = joinpath(dirname(@__DIR__),"color_figures")
+FIG_PATH = joinpath(@__DIR__,"plots","images")
 
-# ╔═╡ e78fb9cb-a676-46f5-8868-46bbc63dee49
-FIG_PATH
+# ╔═╡ d6fbd6f8-fee6-4abd-b8e6-912e84f39954
+selected_image = splitext(patient_image_dict[selected_patient])[1]
+
+# ╔═╡ 434a387a-54ab-4147-89d2-e7fed1d7b0f4
+	cell_coloring = Dict{Int,RGB{Float64}}(
+		c=> if ci in highlighted
+			highlight
+		else
+			get(cols, get(labels, ci, 0) ,unknown_color)  
+		end
+			for (c,ci) in eachrow(df_clustered[df_clustered.Image .== selected_image*".tiff", [:Object,:cluster_index]]))
 
 # ╔═╡ bf024f5d-2ff4-42d4-a2fd-99f4f83df968
 md"""
-### Ref blocks for evaluation control
+## Ref blocks for evaluation control
 """
+
+# ╔═╡ e4bb254e-86ef-4c25-9219-66acb278efc9
+begin # initialize csdict_saved
+if in(readdir(joinpath(@__DIR__,"data")))("colorschemes.jld2") # if the file exists
+ 	JLD2.@load joinpath(@__DIR__,"data","colorschemes.jld2") csdict_saved
+	else # initialize the file
+	csdict_saved = Dict{String, Dict{String, HSV{Float32}}}()
+	JLD2.@save joinpath(@__DIR__,"data","colorschemes.jld2") csdict_saved
+end
+available_keys = Ref{Vector{String}}([])
+available_keys[] = collect(keys(csdict_saved));
+end
+
+# ╔═╡ a629f092-4613-4a67-a366-910b7184302c
+@bind load_delete PlutoUI.combine() do Child
+	md"""
+	load: $(Child(Select(sort(available_keys[]) ))))
+	delete: $(Child(Select(sort(available_keys[] ))))
+	"""
+end
+
+# ╔═╡ e90a2701-a5e5-4eea-9f44-28c527a348d3
+md"""
+### saving
+"""
+
+# ╔═╡ c9e58092-bc6f-4c09-9f8c-5b3ba0339b62
+load_delete_ref = ["",""]
+
+# ╔═╡ 437dd0a9-3d9b-49d1-ac52-9a205bca38fa
+begin
+	load_delete_ref[1] = load_delete[1]
+	load_delete_ref[2] = load_delete[2]
+end
 
 # ╔═╡ 5e261569-b068-4f8e-aeab-809f389759d5
 color_collection = Dict{String,HSV{Float32}}() # rerun to clear
+
+# ╔═╡ 1ada4235-c502-46d6-8861-8ae7b75fff68
+begin 
+	update_save # update the JLD2 with the current color scheme@
+	default_name = load_delete_ref[1]
+	if load_delete_ref[1] != "" 
+		# first delete all elements of color_collection
+		for k in keys(color_collection)
+			delete!(color_collection,k)
+		end
+		# add all new keys to color collection
+		merge!(color_collection, csdict_saved[load_delete_ref[1]])
+	end
+	load_delete_ref[2] != "" && delete!(csdict_saved, load_delete_ref[2]) # cs_delete is to to have a ref boundary
+	JLD2.@save joinpath(@__DIR__,"data","colorschemes.jld2") csdict_saved
+	available_keys[] = collect(keys(csdict_saved));
+	color_update2 = true
+end
+
+# ╔═╡ 31c82837-417a-4da4-b713-448baaf377ea
+@bind colorscheme_name PlutoUI.combine() do Child
+	md"""
+	colorscheme name $(Child(TextField(default=default_name)))
+	"""
+end
 
 # ╔═╡ 8f3f5f9f-f815-4fef-9027-6de431ec9f2d
 color_scheme = ["",HSV(1,1,0)]; # initialize a mutable container for controlling evaluation.
 
 # ╔═╡ 2199af3d-9756-428b-8ecd-18fb34013abb
 begin 
-	if !in(readdir(joinpath(@__DIR__,"data")))("colorschema.h5")
-		h5open(joinpath(@__DIR__,"data","colorschema.h5"), "w") do fid
-           g = create_group(fid, "mygroup")
-           dset = create_dataset(g, "myvector", Float64, (10,))
-           write(dset,rand(10))
-		end
-	end
 	color_update
+	color_update2
 	first(color_scheme) != "" && push!(color_collection, Pair(color_scheme...)) 
 	included_markers = collect(keys(color_collection))
-	saved_schemes = h5open(joinpath(@__DIR__,"data","colorschema.h5"), "r") do fid
-	           keys(fid)
-	end
 	cc = color_collection
 end
 
 # ╔═╡ f7858065-6c79-4636-af1d-5664d73cab85
+begin 
+update_save # set to default if we have loaded colors
 @bind rmmarker PlutoUI.combine() do Child
 	md"""
 	drop target $(Child(Select(vcat([" "], sort(included_markers))))
 	)
 	"""
+end
 end
 
 #@bind rmmarker Select(vcat([" "], sort(included_markers)))
@@ -427,14 +424,6 @@ begin
 	color_scheme[1] = marker
 	delete!(color_collection, rmmarker[1])
 	Pair(color_scheme...)
-end
-
-# ╔═╡ a629f092-4613-4a67-a366-910b7184302c
-@bind load_delete PlutoUI.combine() do Child
-	md"""
-	load: $(Child(Select(vcat([""],sort(saved_schemes))))) 
-	delete: $(Child(Select(vcat([""],sort(saved_schemes)))))
-	"""
 end
 
 # ╔═╡ c375d2c7-a5c5-43d2-9de5-44754c17e1ac
@@ -489,7 +478,7 @@ function countplot_plot( highlighted_counts, total_counts,# list of celltypes
 	end
 	CairoMakie.vlines!(ax2,collect(axes(cumprob_mat,2)) .+ .5, color=RGB(1), linewidth = .5)
 	
-	CairoMakie.save(joinpath(@__DIR__,"plots","cell_numbers.pdf"),fig2)
+	# CairoMakie.save(joinpath(@__DIR__,"plots","cell_numbers.pdf"),fig2)
 	fig2
 end
 
@@ -545,9 +534,6 @@ function convert_to_sparse(color_scheme, panel_df)
 	return (idx,colors)
  end
 
-# ╔═╡ 7aafd053-ace6-4566-9844-0dd9b0936d94
-
-
 # ╔═╡ 3a045540-2f87-49ec-9e46-5d446f61cc1d
 """
 complicated function with the sole purporse of drawing the color wheel using luxor
@@ -590,7 +576,7 @@ end
 	sethue("black")
 	setline(3)
 	circle(Point(S*100*cospi(H/180), -S*100*sinpi(H/180)),4, action = :stroke)
-end 200 200 "colorwheel.pdf"
+end 200 200 FIG_PATH*"/.tmp_colorwheel"
 
 # ╔═╡ cdf7bade-38dc-45da-b685-628009c8e945
 """
@@ -659,24 +645,6 @@ end
 # ╔═╡ c5f01676-388f-4bca-bf85-af3ced1bcc2d
 getmask_tiff(name) = Matrix{Int}(rawview(channelview(TiffImages.load(
         joinpath(DATA_PATH,"masks",name*".tiff"), verbose = false))))
-
-# ╔═╡ 488fb0d5-f61a-43c5-a85b-8a7a3542e8ae
-roi_figure = if "cells" in cellbits 
-		map(i -> ifelse(i == 0, RGB(0.0), get(cell_coloring,i, unknown_color)), getmask_tiff(selected_image))
-	else	
-		color_img(selected_image, cc; value_scale = value_scale)
-end;
-
-# ╔═╡ 06f9feb8-6ef1-4c04-af42-c75344f6509e
-@bind box RectangleDrawing(roi_figure)
-
-# ╔═╡ d0e5885f-44ed-4223-8fcd-1694ad13b09e
-try FullImage(repeat(map(i -> ifelse(i == 0, RGB(0.0), get(cell_coloring,i, unknown_color)), getmask_tiff(selected_image)[get_bounds(box...)...]),inner = (7,7)))
-catch
-	md"""
-	choose region
-	"""
-end	
 
 # ╔═╡ 9dd8c509-d818-45d8-84d9-52e5b95f0dcd
 """
@@ -748,13 +716,16 @@ end
 Save the legend
 """
 function color_scheme_legend(name, color_scheme; value_scale = 1.0)
+	if isempty(color_scheme)
+		color_scheme = Dict("no colors"=>RGB(1,1,1))
+	end
 	Drawing(100, 100, "/tmp/emptydrawing.png")
 	bb = draw_legends(pairs(color_scheme)...)
 	finish()
 	Luxor.@svg begin
 		translate(- getfield(bb.corner2,:x)/2, - getfield(bb.corner2,:y)/2)
 		draw_legends(pairs(color_scheme)...)
-	end getfield(bb.corner2,:x) getfield(bb.corner2,:y)
+	end getfield(bb.corner2,:x) getfield(bb.corner2,:y) "/tmp/tmp_legend.svg"
 end
 
 # ╔═╡ 4e6989c4-72b6-4b54-ae6e-0a035e6cc8e1
@@ -763,8 +734,51 @@ marker_legend = color_scheme_legend("scheme", cc; value_scale = 1.0)
 # ╔═╡ ed85f170-0bc4-4029-9652-b20f27000894
 marker_legend
 
-# ╔═╡ 34bc1539-f994-483c-a107-e983a7aa34e1
-save(joinpath(FIG_PATH,"mostly_tumor_stuff_legend.svg"), color_scheme_legend("macropohage_scheme", cc; value_scale = 1.0) )
+# ╔═╡ 488fb0d5-f61a-43c5-a85b-8a7a3542e8ae
+roi_figure = 
+	let 
+	if "cells" in cellbits 
+		out = map(i -> ifelse(i == 0, RGB(0.0), get(cell_coloring,i, unknown_color)), getmask_tiff(selected_image))
+		name = "cells"
+	else	
+		out = color_img(selected_image, cc; value_scale = value_scale)
+		name = cs[1]
+	end
+		
+	if "save image" in cellbits  
+		save(joinpath(@__DIR__,"plots","images",selected_patient * "_" * name * ".png"), out)
+		if "cells" in cellbits 
+			save(joinpath(@__DIR__,"plots","images","0_cell_type_legend.pdf"), cell_type_legend)
+		else	
+			save(joinpath(@__DIR__,"plots","images","00_legend_$(cs[1]).svg"), marker_legend)
+		end
+	end
+		
+	out
+end;
+
+# ╔═╡ 06f9feb8-6ef1-4c04-af42-c75344f6509e
+@bind box RectangleDrawing(roi_figure)
+
+# ╔═╡ d0e5885f-44ed-4223-8fcd-1694ad13b09e
+try FullImage(repeat(map(i -> ifelse(i == 0, RGB(0.0), get(cell_coloring,i, unknown_color)), getmask_tiff(selected_image)[get_bounds(box...)...]),inner = (7,7)))
+catch
+	md"""
+	choose region
+	"""
+end	
+
+# ╔═╡ 3b08116a-e5f8-4e6b-a077-1d15c93bfa5e
+begin
+save_button	
+csdict_saved[cs[1]] = deepcopy(cs[2]) # cs_add is to to have a ref boundary
+JLD2.@save joinpath(@__DIR__,"data","colorschemes.jld2") csdict_saved
+save(joinpath(FIG_PATH,"$(cs[1])_legend.svg"), color_scheme_legend("macropohage_scheme", cs[2]; value_scale = 1.0))
+available_keys[] = collect(keys(csdict_saved));
+end
+
+# ╔═╡ c430663a-d72e-426e-9f66-17dbb6964f19
+cc
 
 # ╔═╡ 75d64e7f-158c-4eba-b064-1e14505b76af
 begin
@@ -957,80 +971,6 @@ catch
 	"""
 end
 
-# ╔═╡ 23f2e855-aa1e-45b9-8251-836fcd15b9f5
-md"""
-# Compare to manual gating
-
-First note that one patient has two images.
-"""
-
-# ╔═╡ d1e6fbef-7096-4531-b1d0-68dd6100ae3d
-CSV.write(joinpath(@__DIR__,"data","current_images.csv"),DataFrame(unique(zip(df_clustered.Image,df_clustered.img_number,df_clustered.Patient)),["Image","img_number","Patient"]))
-
-# ╔═╡ 1c104609-6d3b-4128-b57d-8a2920cd3317
-[ii[1,"Patient"] => unique(ii[:,"img_number"]) for ii in groupby(df_clustered,:Patient) if length(unique(ii[:,"img_number"]))>1 ]
-
-# ╔═╡ e8c8dadc-b1e3-403b-b56f-2e2f4cd842d5
-df_multigate = let 	img_count_dict = Dict(
-		first(image.img_number) => celltype_count_dict(image.cluster_index,labels) 
-		for image in groupby(df_clustered,:img_number) 
-		# if the number of identified cells is above a certain threshold.
-		if sum(values(celltype_count_dict(image.cluster_index,labels))) > 3000
-		)
-	delete!.(values(img_count_dict), "Dark")
-	delete!.(values(img_count_dict), "Bright")
-	df = vcat( [hcat( DataFrame("img_number" => k),100 .* DataFrame(v) ./  sum(values(v)))  for (k,v) in pairs(img_count_dict)]...)
-	df[sortperm(df.img_number),:]
-end
-
-# ╔═╡ 670cea30-5905-4660-8214-8099d951d8bd
-df_clustered
-
-# ╔═╡ 6db49b75-42a1-499e-8dbd-52433a7245f5
-DataFrame(stack(unique(eachrow(df_clustered[!,["Patient","img_number"]])), dims = 1),["Patient","img_number"])
-
-# ╔═╡ 320b61c2-8984-4eb1-89b7-3c29a57af3d4
-md"""
-- new numbers
-
-- old number
-"""
-
-# ╔═╡ 8a3d5ad1-314a-4ffd-9559-fa1c5ea02630
-function dataframe_to_nested_dict(df::DataFrame, key_col::Symbol, valcols)
-    nested_dict = Dict()
-    for row in eachrow(df)
-        key = row[key_col]
-        sub_dict = Dict(col => row[col] for col in valcols)
-        nested_dict[key] = sub_dict
-    end
-    return nested_dict
-end
-
-
-# ╔═╡ 749c4805-4e4f-4d90-b898-1f065a974a21
-let image_count_dict = dataframe_to_nested_dict(df_multigate, :img_number, shared_cats)
-	image_order = 
-		sort(collect(keys(image_count_dict)), by = x-> image_count_dict[x]["B/Tumor"]/ sum(values(image_count_dict[x])))
-	celltype_order = sort(collect(keys(first(image_count_dict)[2])))[[2,1,3,4,5,6,7,8,9,10,11]]
-	let fig = prob_plot(image_count_dict, celltype_order, image_order; image_names = x-> Dict(unique(zip(df_clustered.img_number,df_clustered.Patient)))[x])
-		CairoMakie.save(joinpath(dirname(DATA_PATH),"cell_types","celltype_fractions_kmeans.pdf"),fig)
-		fig
-	end
-end
-
-# ╔═╡ d6d93982-9ab8-4282-b8fa-d561d1589bae
-let image_count_dict0 = dataframe_to_nested_dict(df_multigate, :img_number, shared_cats), 
-	image_count_dict = dataframe_to_nested_dict(df_manual2[df_manual2.img_number_colin .!= 0,:], :img_number_colin, shared_cats)
-	image_order = 
-		sort(collect(keys(image_count_dict)), by = x-> image_count_dict0[x]["B/Tumor"]/ sum(values(image_count_dict0[x])))
-	celltype_order = sort(collect(keys(first(image_count_dict)[2])))[[2,1,3,4,5,6,7,8,9,10,11]]
-	let fig = prob_plot(image_count_dict, celltype_order, image_order; image_names = x-> Dict(unique(zip(df_clustered.img_number,df_clustered.Patient)))[x])
-		CairoMakie.save(joinpath(dirname(DATA_PATH),"cell_types","celltype_fractions_cytobank.pdf"),fig)
-		fig
-	end
-end
-
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -1071,7 +1011,7 @@ TiffImages = "~0.10.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.5"
+julia_version = "1.10.2"
 manifest_format = "2.0"
 project_hash = "c783bbc11b6885dab5a3d6554b7cbf2f335f0c85"
 
@@ -1260,7 +1200,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.1+0"
+version = "1.1.0+0"
 
 [[deps.ConstructionBase]]
 deps = ["LinearAlgebra"]
@@ -2652,7 +2592,7 @@ version = "0.15.1+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.11.0+0"
+version = "5.8.0+1"
 
 [[deps.libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl", "Pkg"]
@@ -2709,33 +2649,12 @@ version = "3.5.0+0"
 
 # ╔═╡ Cell order:
 # ╠═a112be8c-2245-11ef-2c0f-1d00ed8b2f19
-# ╠═17f2f17a-8b78-4696-9a50-b3f584668c6d
-# ╠═e4f68fd5-df48-416e-9ccd-9146bb007351
-# ╠═ae3fe445-5376-4505-87dd-68f4fd841bb4
 # ╠═cbe74fb5-972f-4127-a6c7-0c50cf8522cb
 # ╠═28214a08-028a-415c-b294-8a290931e8eb
 # ╠═9a87684f-a7e6-4301-af1c-06166546f344
 # ╠═9fcdd12a-cd55-47b4-a98a-6d1c84f4b436
-# ╠═3daf7f1c-4687-468d-80f8-03ede23b39e8
-# ╟─952f5688-ba41-49ec-b5d7-f3e04cf9b4bc
-# ╟─4d9deb1e-77e6-44ca-9d7d-fbb7101e4f39
-# ╟─d40772a9-51a3-494a-b7f2-0bedcd2a2dc3
-# ╟─b1046803-6071-4542-a501-30575b109400
-# ╠═339eb3c7-40de-4a5d-82b2-c571cf421288
-# ╟─434a387a-54ab-4147-89d2-e7fed1d7b0f4
-# ╟─0c29afcf-c687-4776-b870-84583727592c
-# ╟─da0cc366-5471-4f93-bc6d-74739910cffb
-# ╟─3eaceb5b-1d1d-4302-b542-118f79092527
-# ╟─f799657d-681e-42a2-9261-f1ab1c11421f
 # ╟─7bce7789-58d5-49e7-b0cc-f38f2829f0db
-# ╠═718eb743-7b7c-46dd-890b-18a51240db2e
-# ╟─23545893-e290-46a8-b131-b2b013bf3c77
-# ╠═86841954-e590-45a9-936b-7bd653109f4c
-# ╠═08358c11-cf3f-49a1-bde9-f143899c1557
-# ╠═9b6085f3-83ab-4a4b-9734-a837204ee5da
-# ╠═93f1dc9b-8379-4e12-a680-70cef029e6e4
-# ╟─73279267-ba04-47da-9bba-81a1bc26269c
-# ╠═d6fbd6f8-fee6-4abd-b8e6-912e84f39954
+# ╠═73279267-ba04-47da-9bba-81a1bc26269c
 # ╟─34f5a972-1aba-4dc3-8fa2-4de502f5f26e
 # ╟─43d75174-d346-40cf-ab10-40c50adf5b4f
 # ╟─6fba6f0b-cce8-4a2a-a970-d6a5c9c2c2f9
@@ -2746,29 +2665,49 @@ version = "3.5.0+0"
 # ╠═a629f092-4613-4a67-a366-910b7184302c
 # ╠═f501dad3-6a8f-43a6-9931-75cdc7451769
 # ╟─ffd766c6-e030-484b-a769-0bd3bad19fa4
-# ╠═31c82837-417a-4da4-b713-448baaf377ea
+# ╟─31c82837-417a-4da4-b713-448baaf377ea
 # ╠═50892ac6-3480-4f1b-9f9b-bf60753989c4
-# ╠═488fb0d5-f61a-43c5-a85b-8a7a3542e8ae
-# ╠═4e6989c4-72b6-4b54-ae6e-0a035e6cc8e1
+# ╟─a79670ce-9a64-41a8-939f-4cb4e6a84dfe
 # ╠═39f58298-320a-4e7e-a170-7516d85149d4
-# ╟─06f9feb8-6ef1-4c04-af42-c75344f6509e
-# ╟─c0170387-a1d1-4f17-a41c-ae3875c2034a
+# ╠═4e6989c4-72b6-4b54-ae6e-0a035e6cc8e1
+# ╠═06f9feb8-6ef1-4c04-af42-c75344f6509e
+# ╠═c0170387-a1d1-4f17-a41c-ae3875c2034a
 # ╟─8272ba6b-b303-43ad-8b3f-a96e28e387e0
 # ╠═0aecf292-b442-4b9a-b690-06e061a6af50
-# ╠═d36a8044-b12d-4eb3-95a8-7f9b2ecc6fa7
-# ╠═34bc1539-f994-483c-a107-e983a7aa34e1
-# ╠═e78fb9cb-a676-46f5-8868-46bbc63dee49
 # ╟─ba317e1a-c67c-4f5a-b62a-56d9c0f0df86
 # ╟─ce169cd6-91ab-4efb-9915-88d09f36038c
-# ╟─ed85f170-0bc4-4029-9652-b20f27000894
+# ╠═ed85f170-0bc4-4029-9652-b20f27000894
 # ╟─02e89f20-f528-4abe-8596-f3aced0bdd48
 # ╟─d0e5885f-44ed-4223-8fcd-1694ad13b09e
 # ╟─4cb153af-c1a0-47f5-a3d1-dfaa72f1c8b5
-# ╟─b558f09a-9468-4b49-915b-a614ee009618
+# ╟─0c29afcf-c687-4776-b870-84583727592c
+# ╟─da0cc366-5471-4f93-bc6d-74739910cffb
+# ╠═3eaceb5b-1d1d-4302-b542-118f79092527
+# ╠═7d73f953-4365-433d-b7f4-0716c79805f0
+# ╠═b558f09a-9468-4b49-915b-a614ee009618
+# ╠═f799657d-681e-42a2-9261-f1ab1c11421f
+# ╟─4d9deb1e-77e6-44ca-9d7d-fbb7101e4f39
+# ╠═d40772a9-51a3-494a-b7f2-0bedcd2a2dc3
+# ╠═718eb743-7b7c-46dd-890b-18a51240db2e
+# ╠═86841954-e590-45a9-936b-7bd653109f4c
+# ╠═08358c11-cf3f-49a1-bde9-f143899c1557
+# ╠═3daf7f1c-4687-468d-80f8-03ede23b39e8
+# ╟─952f5688-ba41-49ec-b5d7-f3e04cf9b4bc
+# ╟─6eac3e81-d949-4a59-ae77-0c16a7f29aaa
+# ╠═339eb3c7-40de-4a5d-82b2-c571cf421288
+# ╠═434a387a-54ab-4147-89d2-e7fed1d7b0f4
 # ╠═85c3cc24-b7c0-41cf-a32a-9094d00d2304
 # ╠═4c1a3c3b-f716-4437-8da7-0539673755e5
 # ╠═812948b4-0efe-499c-be2f-3a1a26002ff0
+# ╠═d6fbd6f8-fee6-4abd-b8e6-912e84f39954
+# ╠═488fb0d5-f61a-43c5-a85b-8a7a3542e8ae
 # ╟─bf024f5d-2ff4-42d4-a2fd-99f4f83df968
+# ╠═e4bb254e-86ef-4c25-9219-66acb278efc9
+# ╠═3b08116a-e5f8-4e6b-a077-1d15c93bfa5e
+# ╠═1ada4235-c502-46d6-8861-8ae7b75fff68
+# ╟─e90a2701-a5e5-4eea-9f44-28c527a348d3
+# ╠═c9e58092-bc6f-4c09-9f8c-5b3ba0339b62
+# ╠═437dd0a9-3d9b-49d1-ac52-9a205bca38fa
 # ╠═5e261569-b068-4f8e-aeab-809f389759d5
 # ╠═8f3f5f9f-f815-4fef-9027-6de431ec9f2d
 # ╠═c375d2c7-a5c5-43d2-9de5-44754c17e1ac
@@ -2777,10 +2716,9 @@ version = "3.5.0+0"
 # ╠═d2478db9-37a4-40cd-ab1d-7bef00352740
 # ╠═12e96ec3-00cf-4f83-92b7-0ae10256d711
 # ╠═086e88f3-6505-4ef9-9b1e-1285290fa515
-# ╠═7aafd053-ace6-4566-9844-0dd9b0936d94
 # ╠═3a045540-2f87-49ec-9e46-5d446f61cc1d
 # ╠═cdf7bade-38dc-45da-b685-628009c8e945
-# ╟─5891fc07-1741-4268-9ee5-d0f803ce9e7b
+# ╠═5891fc07-1741-4268-9ee5-d0f803ce9e7b
 # ╠═56ad0689-2552-4098-961c-1a64ad326783
 # ╠═89548f46-bb68-4ee5-bedb-b310c916f359
 # ╠═9f9be021-8ad3-409a-bdb8-eac51b64a504
@@ -2788,6 +2726,7 @@ version = "3.5.0+0"
 # ╠═9dd8c509-d818-45d8-84d9-52e5b95f0dcd
 # ╠═6858f726-fde2-4273-a1c5-5268617a53d6
 # ╠═5b15bb55-6b81-47e3-beef-a292bd20562c
+# ╠═c430663a-d72e-426e-9f66-17dbb6964f19
 # ╠═75d64e7f-158c-4eba-b064-1e14505b76af
 # ╟─6ca8e213-3b45-44fc-989a-6a938b1ff785
 # ╠═c28e4ba4-4671-4cc2-a3eb-5ee8b8d0aee6
@@ -2800,15 +2739,5 @@ version = "3.5.0+0"
 # ╠═f3123e19-b4c9-4ed7-b59c-032e49c420ba
 # ╠═e3d16459-06bd-4812-8e2f-e2830707d731
 # ╠═3cc89a3e-5405-496e-94b4-9a5165558915
-# ╟─23f2e855-aa1e-45b9-8251-836fcd15b9f5
-# ╠═d1e6fbef-7096-4531-b1d0-68dd6100ae3d
-# ╠═1c104609-6d3b-4128-b57d-8a2920cd3317
-# ╠═e8c8dadc-b1e3-403b-b56f-2e2f4cd842d5
-# ╠═670cea30-5905-4660-8214-8099d951d8bd
-# ╠═6db49b75-42a1-499e-8dbd-52433a7245f5
-# ╟─320b61c2-8984-4eb1-89b7-3c29a57af3d4
-# ╠═8a3d5ad1-314a-4ffd-9559-fa1c5ea02630
-# ╠═749c4805-4e4f-4d90-b898-1f065a974a21
-# ╠═d6d93982-9ab8-4282-b8fa-d561d1589bae
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002

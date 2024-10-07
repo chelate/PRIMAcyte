@@ -31,6 +31,9 @@ end
 # ╔═╡ 90a7d98c-25a1-4e34-bebb-718d2d22f231
 using ThreadPools
 
+# ╔═╡ d477d45b-2b25-4842-9e31-bd950c7021b8
+using Random
+
 # ╔═╡ bc023546-4867-49e1-822b-7a3e4a4a33f7
 begin
 	using Graphs
@@ -92,6 +95,7 @@ if "kmeans_result.jld2" in readdir(joinpath(@__DIR__,"data")) # check if result 
 	JLD2.@load joinpath(@__DIR__,"data", "kmeans_result.jld2") kmeans_result # load it if it exists
 else # otherwise run 10 kmeans and choose the best one.
 	# Parallel implementation
+	Random.seed!(123)
 	kmeans_result = let results = ThreadPools.qmap(1:10) do _
 		kmeans(X, 200; maxiter=300, init=:kmpp)
 		end
@@ -135,13 +139,15 @@ md"""
 """
 
 # ╔═╡ aacb42c6-9c35-4647-b4fa-97e6693b923b
-cs = ColorSchemes.tableau_20
+begin
+	cs = ColorSchemes.tableau_20
+	collect(enumerate(cs))
+end
 
 # ╔═╡ 9f351f31-72a5-420e-acdf-e17da011fcdd
 color_dictionary = Dict(
 	"Treg" => cs[10],
-	"T(CD4+PD1+)" => cs[1],
-	"T(CD4+PD1-)" => cs[8],
+	"T(CD4+)" => cs[7],
 	"Endo" => cs[5],
 	"Stromal" => 1.2*cs[20],
 	"Neut" => cs[6],
@@ -150,7 +156,7 @@ color_dictionary = Dict(
 	"B/Tumor" => cs[16],
 	"Mono" => cs[11],
 	"T(CD8+)"  => cs[3],
-	"T(CD8+PD1+)"  => cs[4],
+	#"T(CD8+PD1+)"  => cs[4],
 	"Dendritic"  => cs[2],
 	"B/FDC"  => cs[17]
 )
@@ -407,16 +413,16 @@ end
 begin
 	children_1 	= ("OK1","Dark")
 	scale_1 	= 
-		Dict("CD45RA"=> 1, "CD45RO" =>1 ,"CD68"=>1, "CD163" => 3, "CD14" => 2, "TIM3" => 2)
-	@bind lines_1 boundinglines(1, [2,200])
+		Dict("CD45" =>1 ,"CD68"=>1, "CD163" => 3, "CD14" => 2, "TIM3" => 2)
+	@bind lines_1 boundinglines(1, [1,200])
 end
 
 # ╔═╡ eba21afe-8fc6-49b7-a419-c06efd3f7a44
 begin
 	children_2 	= ("CD3+","CD3-")
 	scale_2	= 
-		Dict("CD3"=>6.5, "CD20"=> 2.5, "CD19"=> 2, "CD7"=>5, "CD45RA"=> 3, "CD45RO" =>3 ,"CD68"=>5.5,"CD4"=> 5, "CD8a"=> 5)
-	@bind lines_2 boundinglines(2, [172,199])
+		Dict("CD3"=>7, "CD20"=> 2.5, "CD19"=> 2, "CD7"=>5, "CD45"=> 3, "CD68"=>3.5,"CD4"=> 6, "CD8a"=> 4)
+	@bind lines_2 boundinglines(2, [172,200])
 end
 
 # ╔═╡ e3567477-f45a-41ff-9254-88862b58ffc0
@@ -500,10 +506,10 @@ end
 
 # ╔═╡ 7f6a63c5-560b-4921-94da-f81f58240224
 begin
-	children_4 	= ("CD8+","T(CD4+)") # TCell subcluster 
+	children_4 	= ("T(CD8+)","T(CD4+)") # TCell subcluster 
 	scale_4	= 
-		Dict("CD8a" => 5, "CD4" => 4)
-	@bind lines_4 boundinglines(4, [30,55])
+		Dict("CD8a" => 5, "CD)4" => 4)
+	@bind lines_4 boundinglines(4, [1,15])
 end
 
 # ╔═╡ d7a8145a-96e5-4617-becb-dbb470d96164
@@ -723,6 +729,7 @@ JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 NetworkLayout = "46757867-2c16-5918-afeb-47bfcb05e46a"
 PlutoUI = "7f904dfe-b85e-4ff6-b463-dae2292396a8"
+Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 ThreadPools = "b189fb0b-2eb5-4ed4-bc0c-d34c51242431"
 
@@ -748,7 +755,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "ac76258d680db65eb10b92476eb2224104e188fc"
+project_hash = "4bbc8e3ca26ecba9647702287f05183183e0271f"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -2332,6 +2339,7 @@ version = "3.5.0+0"
 # ╠═ccbc0bd6-3cf0-48d5-a35e-885606e7f2e8
 # ╟─70c9e039-7d20-4d35-9b05-5ae304c9525f
 # ╠═90a7d98c-25a1-4e34-bebb-718d2d22f231
+# ╠═d477d45b-2b25-4842-9e31-bd950c7021b8
 # ╠═72eb6dac-533f-43f0-97f0-def102d7d442
 # ╠═60d92fda-cb7c-4608-a33f-3fb513c9ee24
 # ╠═4bc494ef-71f4-4c7f-9567-9b84e737e374
