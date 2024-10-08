@@ -17,6 +17,7 @@ begin
 	using Distributions
 	import MultivariateStats: fit, PCA
 	using RCall
+	using JLD2
 end
 
 # ╔═╡ 27677dde-94a0-41c1-8db9-2acbd4e2a126
@@ -251,10 +252,27 @@ begin
 		panel_df.name[ii]
 	end
 	shared_channels = intersect(names(sm_df),names(df))
+	# these are the channels collected in both the spillover matrix
+	# and in the data collection
 end
 
+# ╔═╡ 4060b9c7-2132-4a4f-8cae-063e58868469
+md"""
+## Define and save targets
+
+This is important to downstream analysis (clustering / annotation)
+"""
+
 # ╔═╡ d67540db-7dde-4c80-8396-6fbf040c5f6b
-sm_df
+targets = String.(sm_df.Column1) # these are the spotted proteins of interest and we assume that they constitue the essential targets of intererst
+
+# ╔═╡ a198a5e3-f178-4125-a2f5-4f1cb1f06fa5
+JLD2.@save joinpath(@__DIR__,"data","targets.jld2") targets
+
+# ╔═╡ df628481-71d1-469e-aa27-3ffe4a2d46d1
+md"""
+## Problem setup
+"""
 
 # ╔═╡ d6c9ac74-8d8e-4786-9748-5fff973c6268
 bmat = permutedims(Matrix(df[:,shared_channels]))
@@ -293,7 +311,7 @@ We package the result in a dataframe and export these unnormalized outputs as a 
 xmat = mapslices(prob,bmat; dims = 1)
 
 # ╔═╡ efa773ac-9704-4744-980d-a7a6c89f02ff
-compensated_df = hcat(select(df, Not(shared_channels)), DataFrame(permutedims(xmat, 	(2,1)), Symbol.(sm_df.Column1)))
+compensated_df = hcat(select(df, Not(shared_channels)), DataFrame(permutedims(xmat, 	(2,1)), Symbol.(targets)))
 
 # ╔═╡ 30922d31-fc4a-4675-84c9-451bbce2ab8d
 md"""
@@ -311,8 +329,8 @@ Some fairly cursed code that returns the worst spillover values
 
 # ╔═╡ 2254336b-2fbe-4da9-8686-a43e9dba62d7
 spillover_keys = Dict(
-	(shared_channels[ii],sm_df.Column1[jj]) => amat[ii,jj] 
-		for ii in axes(amat,1), jj in axes(amat,2) if shared_channels[ii] != sm_df.Column1[jj] && amat[ii,jj] > 0.02 && in(sm_df.Column1)(shared_channels[ii]))
+	(shared_channels[ii],targets[jj]) => amat[ii,jj] 
+		for ii in axes(amat,1), jj in axes(amat,2) if shared_channels[ii] != targets[jj] && amat[ii,jj] > 0.02 && in(targets)(shared_channels[ii]))
 
 # ╔═╡ 03e21d92-ccaf-45d1-b66a-26b0aaaed342
 let xx = :Desmin, yy =  :CD7
@@ -424,7 +442,7 @@ md"""
 """
 
 # ╔═╡ 5c15d831-83fd-4d1c-af1a-2949caa6fdeb
-data_mat = sqrt.(permutedims(Matrix(data_df[:,sm_df.Column1])));
+data_mat = sqrt.(permutedims(Matrix(data_df[:,targets])));
 
 # ╔═╡ 9f6a3d22-ad23-4ccc-9c4f-074d414b2561
 full_pca = fit(PCA,data_mat; pratio = 1.0, mean = 0);
@@ -474,19 +492,20 @@ norm(MultivariateStats.reconstruct(full_pca, sqrt.(full_pca.prinvars) .* vcat(wm
 corrected_data_mat = MultivariateStats.reconstruct(full_pca, sqrt.(full_pca.prinvars) .* vcat(permutedims(wmaj_images_corrected),wmin))
 
 # ╔═╡ 39bbb097-c14b-4ae9-a9e3-a26c37534973
-corrected_data_df = hcat(select(df, Not(sm_df.Column1))[Not(outliers),:], 
-	DataFrame(permutedims(corrected_data_mat), Symbol.(sm_df.Column1)))
+corrected_data_df = hcat(select(df, Not(targets))[Not(outliers),:], 
+	DataFrame(permutedims(corrected_data_mat), Symbol.(targets)))
 
 # ╔═╡ cb8b9ddb-97db-4a81-a064-627e603fa35c
-let fig = Figure(size = (800,400))
-	ax = Axis(fig[1,1]; yticks = (eachindex(sm_df.Column1),sm_df.Column1), xlabel = "Image", title = "Median expression")
-	ax2 = Axis(fig[1,2]; yticks = (eachindex(sm_df.Column1),sm_df.Column1), xlabel = "Image", title = "Median expression (batch corrected)")
-	mat = stack(asinh.(10 .* quantile.(eachcol(image_df[:,sm_df.Column1]), 0.5))
-		for image_df in groupby(compensated_df[Not(outliers),:],:Image))
+let fig = Figure(size = (800,700))
+	ax = Axis(fig[1,1]; yticks = (eachindex(targets),targets), xlabel = "Image", title = "Median expression")
+	ax2 = Axis(fig[1,2]; yticks = (eachindex(targets),targets), xlabel = "Image", title = "Median expression (batch corrected)")
+	mat = permutedims(stack(asinh.(10 .* quantile.(eachcol(image_df[:,sm_df.Column1]), 0.5))
+		for image_df in groupby(compensated_df[Not(outliers),:],:Image)))
+	mat2 = permutedims(stack(asinh.(10 .* quantile.(eachcol(image_df[:,sm_df.Column1]), 0.5))
+		for image_df in groupby(corrected_data_df[Not(outliers),:],:Image)))
 	joint_limits = extrema(vec(mat))
 	heatmap!(ax,mat; colorrange = joint_limits)
-	heatmap!(ax2,stack(asinh.(10 .* quantile.(eachcol(image_df[:,sm_df.Column1]), 0.5))
-		for image_df in groupby(corrected_data_df[Not(outliers),:],:Image))
+	heatmap!(ax2,mat2
 	; colorrange = joint_limits)
 	fig
 end
@@ -508,6 +527,7 @@ CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 ImageCore = "a09fc81d-aa75-5fe9-8630-4744c3626534"
+JLD2 = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
 LinearAlgebra = "37e2e46d-f89d-539d-b4ee-838fcccc9c8e"
 LogExpFunctions = "2ab3a3ac-af41-5b50-aa03-7779005ae688"
 MultivariateStats = "6f286f6a-111f-5878-ab1e-185364afe411"
@@ -522,6 +542,7 @@ CairoMakie = "~0.12.12"
 DataFrames = "~1.6.1"
 Distributions = "~0.25.89"
 ImageCore = "~0.10.2"
+JLD2 = "~0.5.4"
 LogExpFunctions = "~0.3.28"
 MultivariateStats = "~0.9.1"
 PlutoUI = "~0.7.55"
@@ -536,7 +557,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.10.2"
 manifest_format = "2.0"
-project_hash = "0a65c1fe72d5fb62d23cd9774bc1c530e0e40947"
+project_hash = "12a4be18aca8cea24f4974f8d577dac6a4fdb876"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1186,6 +1207,12 @@ version = "1.10.0"
 git-tree-sha1 = "a3f24677c21f5bbe9d2a714f95dcd58337fb2856"
 uuid = "82899510-4779-5014-852e-03e436cf321d"
 version = "1.0.0"
+
+[[deps.JLD2]]
+deps = ["FileIO", "MacroTools", "Mmap", "OrderedCollections", "PrecompileTools", "Requires", "TranscodingStreams"]
+git-tree-sha1 = "9b8b3233d4a611a68f6cbcba96049c8d6fd3de73"
+uuid = "033835bb-8acc-5ee8-8aae-3f567f8a3819"
+version = "0.5.4"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
@@ -2121,7 +2148,10 @@ version = "3.6.0+0"
 # ╠═10b92376-2bba-4a22-bd1d-a17aeba7fbcb
 # ╠═5c7c91b6-3e30-4d7d-bb76-63ea8bd8a65e
 # ╠═ce61aa00-a6d5-4ca3-bc80-841166f41a15
+# ╟─4060b9c7-2132-4a4f-8cae-063e58868469
 # ╠═d67540db-7dde-4c80-8396-6fbf040c5f6b
+# ╠═a198a5e3-f178-4125-a2f5-4f1cb1f06fa5
+# ╟─df628481-71d1-469e-aa27-3ffe4a2d46d1
 # ╠═d6c9ac74-8d8e-4786-9748-5fff973c6268
 # ╠═61ce6ecf-d5db-42ec-a059-c90f3a4f3612
 # ╠═25d82aa7-ebdc-451a-8e39-dfc27a3bd237
