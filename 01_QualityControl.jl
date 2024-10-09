@@ -69,7 +69,7 @@ Images are filtered to only be kept if they contain more than minimum_cells
 have_ilastik = in(readdir(DATA_PATH))("ilastik_labels")	
 
 # ╔═╡ c59c29fb-340d-48d8-a340-8565d544ed24
-minimum_cells = 1e3
+minimum_cells = 1.2e3
 
 # ╔═╡ af600316-b7dc-4420-9e74-4dc3ee7285f8
 # get a tiff in array form
@@ -112,70 +112,16 @@ knn_dict = Dict(
 	end
 	for df_image in groupby(df,:Image))
 
-# ╔═╡ 3250de1c-8c1b-45d0-9886-c57848de352f
-md"""
-# Plotting of ilastik results
-"""
-
-# ╔═╡ 90763945-b5ad-4b3d-b8b7-4ef102fef473
-md"""
-# Viewing images and checking the ilastik outputs
-We now wish to plot the outputs so we can see which images are causing problems.
-There are some images which are almost entirely dark
-"""
-
-# ╔═╡ c1804435-41ea-4549-af97-8a8fab971c63
-function ilastik_image(filename; names = ilastik_channel_names)
-	array = get_probability_array(filename)
-	imresize(dropdims(mapslices(array, dims = 1) do ps
-		RGB(ps[1],ps[2],ps[3])
-	end; dims = 1), (100, 100))
-end
-
-# ╔═╡ 58cac486-7763-4f09-8b15-c518f3c6442c
-md"""
-## group 1
-"""
-
-# ╔═╡ db0d0921-2bbb-4811-94ed-95640b61c74f
-md"""
-## group 2
-"""
-
-# ╔═╡ 8f15d92e-ee51-4c8d-a51e-d014e1a28b94
-md"""
-# Cell and image quality control
-
-We consider the following criteria:
-- the cell should have a good illastik score
-- the cell should not be isolated, it should have some neighbors that we can also trust.
-- images with very few cells should be removed entirely.
-
-This implies the following steps:
-
-	0. plotting of the cells
-	1. construction of nearest neighbor graph
-	2. counting the number of neighbors above the threshold illastik score.
-	3. removing cells that do not meet this joint criteria
-"""
-
-# ╔═╡ f8054f20-8c72-458f-87ef-d12effec38a6
-md"""
-Here we use a sofmax sum over a soft max of pvalues to set the criterion. This is roughly speaking a distance weighted average that weighs good points higher than bad points.
-
-Its somewhat time consuming to build the knn graph for every image. It might be worth it to do it twice and remove isolated cells.
-"""
-
 # ╔═╡ 2a035a17-ae0b-4868-b6ff-05ad94d28f6d
-function rejectioncrit(pval::AbstractVector, dist; σ = 12.0, β = 15)
+function rejectioncrit(pval::AbstractVector, dist; σ = 12.0, β = 10)
 	# this is a function of the nearest neighbors, doing gaussian convolution and taking a β-maximum of the weighted neighbors. 
 	# The hope is that this reduces the variation from the p-noise.
 	# increasing σ and increasing β smooth out the bad regions more or less.
 	# PARARMETERS p_min = minimum weighted probability of being normal tissue
 	# d_min = maximum distance of the 4th nearest neighbor
 	# small d_min removes isolated clusters of less than 4 cells.
-	p_min = 0.84
-	d_min = 20 # curently super slack (we are not filtering anything)
+	p_min = 0.80
+	d_min = 25
 	log(dot(softmax( (- dist ./ σ) .^2 ), exp.(β .* pval))) / β > p_min && dist[4] < d_min
 end
 
@@ -222,10 +168,35 @@ end
 # ╔═╡ 97ab2999-ddd0-4db1-848a-d4b7980acfde
 df_joined
 
+# ╔═╡ 3250de1c-8c1b-45d0-9886-c57848de352f
+md"""
+# Plotting of ilastik results
+"""
+
 # ╔═╡ bbbb98aa-0ee5-48db-9281-20936ad5cfe0
 if have_ilastik
 	plot(sort(df_joined.p_normal),range(0,1,length(df_joined.p_normal)), label = "CDF")
 end
+
+# ╔═╡ 90763945-b5ad-4b3d-b8b7-4ef102fef473
+md"""
+# Viewing images and checking the ilastik outputs
+We now wish to plot the outputs so we can see which images are causing problems.
+There are some images which are almost entirely dark
+"""
+
+# ╔═╡ c1804435-41ea-4549-af97-8a8fab971c63
+function ilastik_image(filename; names = ilastik_channel_names)
+	array = get_probability_array(filename)
+	imresize(dropdims(mapslices(array, dims = 1) do ps
+		RGB(ps[1],ps[2],ps[3])
+	end; dims = 1), (100, 100))
+end
+
+# ╔═╡ 58cac486-7763-4f09-8b15-c518f3c6442c
+md"""
+## group 1
+"""
 
 # ╔═╡ 3802880d-7ed7-4dbb-8b6d-ccd099548241
 if have_ilastik
@@ -236,6 +207,11 @@ let rows = 5, cols = 3
 end
 end
 
+# ╔═╡ db0d0921-2bbb-4811-94ed-95640b61c74f
+md"""
+## group 2
+"""
+
 # ╔═╡ c04a27af-a7cd-4e42-8783-39ea326668db
 if have_ilastik
 let rows = 8, cols = 6
@@ -245,12 +221,36 @@ let rows = 8, cols = 6
 end
 end
 
+# ╔═╡ 8f15d92e-ee51-4c8d-a51e-d014e1a28b94
+md"""
+# Cell and image quality control
+
+We consider the following criteria:
+- the cell should have a good illastik score
+- the cell should not be isolated, it should have some neighbors that we can also trust.
+- images with very few cells should be removed entirely.
+
+This implies the following steps:
+
+	0. plotting of the cells
+	1. construction of nearest neighbor graph
+	2. counting the number of neighbors above the threshold illastik score.
+	3. removing cells that do not meet this joint criteria
+"""
+
+# ╔═╡ f8054f20-8c72-458f-87ef-d12effec38a6
+md"""
+Here we use a sofmax sum over a soft max of pvalues to set the criterion. This is roughly speaking a distance weighted average that weighs good points higher than bad points.
+
+Its somewhat time consuming to build the knn graph for every image. It might be worth it to do it twice and remove isolated cells.
+"""
+
 # ╔═╡ 751b682c-ff2d-4226-aa95-8fcb4db451e0
 let fig = Figure()
 	ax = Axis(fig[1,1]; xlabel = "# of HQ cells in ROI", ylabel = "CDF",title = "ROI inclusion criteria", xscale = log10)
 	ylims!(ax,-0.00,1.0)
 	xlims!(ax,10,5e4)
-	lines!(ax,
+	stairs!(ax,
 		sort([sum(df_image.cell_included) for df_image in 	groupby(df_joined,:Image)]),
 		range(0,1,length(groupby(df_joined,:Image))); linewidth = 3)
 	vlines!(ax,[minimum_cells]; color = :red)
@@ -259,19 +259,24 @@ let fig = Figure()
 	fig
 end
 
-# ╔═╡ f98c3501-521a-4fe4-aafd-7bb3d6c6b0a8
-
-
 # ╔═╡ 74d18f8f-50ad-4402-8034-651f97efc0e0
 if have_ilastik
-let df_image = groupby(df_joined,:Image)[58]
+let df_image = groupby(df_joined,:Image)[56]
+	pat = first(df_image.Patient)
+	
 	xx = permutedims(Matrix(select(df_image,r"centroid-0",r"centroid-1")))
-	inds, dist = knn(KDTree(xx), xx, 45, true)
-	pvals = map(x->df_image.p_normal[x], stack(inds))
-	included = map(rejectioncrit, eachcol(pvals), dist)
-	scatter(xx[2,:],xx[1,:], color = included .+ 1, aspectratio = 1.0, markersize = 8)
+	included = df_image.cell_included
+	
+	fig = Figure(size = (400,400))
+	ax = Axis(fig[1,1], aspect = 1,title = pat * ": cells = $(sum(included))")
+	scatter!(ax, xx[2,:],xx[1,:], color = included .+ 1,markersize = 8, colormap =  :RdYlGn_4)
+	save(joinpath(@__DIR__,"plots","01_cell_filtering_$pat.pdf"),fig)
+	fig
 end
 end
+
+# ╔═╡ 480ef688-7c60-4d53-8b80-6fb3df629605
+names(df_joined)
 
 # ╔═╡ 58641e8d-707f-494a-b535-8faa6d0e798e
 md"""
@@ -2422,6 +2427,7 @@ version = "3.6.0+0"
 # ╠═5a09e808-b84a-4134-87db-adc08818d9b5
 # ╠═47e2b91e-1d22-4410-b699-be06f3e09087
 # ╠═97ab2999-ddd0-4db1-848a-d4b7980acfde
+# ╠═2a035a17-ae0b-4868-b6ff-05ad94d28f6d
 # ╟─3250de1c-8c1b-45d0-9886-c57848de352f
 # ╠═bbbb98aa-0ee5-48db-9281-20936ad5cfe0
 # ╠═90763945-b5ad-4b3d-b8b7-4ef102fef473
@@ -2435,9 +2441,8 @@ version = "3.6.0+0"
 # ╠═cbfbbf4d-a03b-4038-9bac-42b841ce4397
 # ╟─f8054f20-8c72-458f-87ef-d12effec38a6
 # ╠═751b682c-ff2d-4226-aa95-8fcb4db451e0
-# ╠═2a035a17-ae0b-4868-b6ff-05ad94d28f6d
-# ╠═f98c3501-521a-4fe4-aafd-7bb3d6c6b0a8
 # ╠═74d18f8f-50ad-4402-8034-651f97efc0e0
+# ╠═480ef688-7c60-4d53-8b80-6fb3df629605
 # ╠═58641e8d-707f-494a-b535-8faa6d0e798e
 # ╠═babed64d-51a1-49c4-b756-cba3ebe93fe8
 # ╠═db579f30-19b9-43f3-b69e-da846e2f895b

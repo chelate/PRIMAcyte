@@ -46,6 +46,11 @@ This repository contains a set of Julia Pluto notebooks that can be run in succe
 
 - `04_ImageViewer.jl`: View images and save colorschemes
 
+- `05_tSNE.jl`: Generates and saves tsne associated with batch-corrected data for downstream analysis
+
+- `06_Microenvironments.jl`: Generates and saves tsne associated with batch-corrected data for downstream analysis
+
+
 ## To do
   - `05_Microenvironments.jl`
   - `06_PatientData.jl`

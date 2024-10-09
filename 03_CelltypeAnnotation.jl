@@ -26,6 +26,9 @@ begin
 	using PlutoUI
 	using ColorTypes
 	using ColorSchemes
+	using Graphs
+	import NetworkLayout:Buchheim
+	import GraphMakie:graphplot
 end
 
 # ╔═╡ 90a7d98c-25a1-4e34-bebb-718d2d22f231
@@ -33,13 +36,6 @@ using ThreadPools
 
 # ╔═╡ d477d45b-2b25-4842-9e31-bd950c7021b8
 using Random
-
-# ╔═╡ bc023546-4867-49e1-822b-7a3e4a4a33f7
-begin
-	using Graphs
-	using NetworkLayout
-	using GraphMakie
-end
 
 # ╔═╡ aa8273cf-8c5f-41b4-8cf0-91bcc60aa30f
 PlutoUI.TableOfContents()
@@ -62,9 +58,6 @@ let
 	JLD2.@load joinpath(@__DIR__,"data","targets.jld2") targets
 	global clusteron = setdiff(targets, ["DNA1"]) # don't cluster on these
 end
-
-# ╔═╡ ab344b77-5628-4d71-8097-d225e8c514e7
-hist(df.CD4)
 
 # ╔═╡ ccbc0bd6-3cf0-48d5-a35e-885606e7f2e8
 begin
@@ -2306,7 +2299,6 @@ version = "3.6.0+0"
 # ╟─72dfe345-52c4-4611-9664-6f66abc5468f
 # ╠═351bb231-931f-4759-8005-15ad991f9a48
 # ╠═dfbf5da0-674f-4b1d-bb55-978cfe1c35f3
-# ╠═ab344b77-5628-4d71-8097-d225e8c514e7
 # ╠═ccbc0bd6-3cf0-48d5-a35e-885606e7f2e8
 # ╟─70c9e039-7d20-4d35-9b05-5ae304c9525f
 # ╠═90a7d98c-25a1-4e34-bebb-718d2d22f231
@@ -2376,7 +2368,6 @@ version = "3.6.0+0"
 # ╠═0b508d6f-e167-423a-bfe8-6c07c35f2070
 # ╠═1fb4991e-dec3-4859-9ecd-f92e5cc573e3
 # ╠═8dc0fdd0-dede-40e6-bbcf-c427f341be57
-# ╠═bc023546-4867-49e1-822b-7a3e4a4a33f7
 # ╠═1f9d494b-56fc-47db-94e1-2a11d6192b53
 # ╠═a6e7ad98-97b8-415d-8792-91d5143d9336
 # ╠═53eb63b1-7fa6-48db-9e41-d45c44f3d889
