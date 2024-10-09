@@ -69,7 +69,7 @@ Images are filtered to only be kept if they contain more than minimum_cells
 have_ilastik = in(readdir(DATA_PATH))("ilastik_labels")	
 
 # ╔═╡ c59c29fb-340d-48d8-a340-8565d544ed24
-minimum_cells = 5e2
+minimum_cells = 1e3
 
 # ╔═╡ af600316-b7dc-4420-9e74-4dc3ee7285f8
 # get a tiff in array form
@@ -103,6 +103,14 @@ end
 
 # ╔═╡ a3402ed3-3452-47e7-b6ae-ae7e33a5076e
 ilastik_channel_names = [:p_normal, :p_degraded, :p_void]
+
+# ╔═╡ 5a09e808-b84a-4134-87db-adc08818d9b5
+knn_dict = Dict( 
+	first(df_image.Image) => let xx = permutedims(Matrix(select(df_image,r"centroid-0",r"centroid-1")))
+		inds, dist = knn(KDTree(xx), xx, 10, true)
+		(inds, dist)
+	end
+	for df_image in groupby(df,:Image))
 
 # ╔═╡ 3250de1c-8c1b-45d0-9886-c57848de352f
 md"""
@@ -159,14 +167,15 @@ Its somewhat time consuming to build the knn graph for every image. It might be 
 """
 
 # ╔═╡ 2a035a17-ae0b-4868-b6ff-05ad94d28f6d
-function rejectioncrit(pval::AbstractVector, dist; σ = 50.0, β = 15)
+function rejectioncrit(pval::AbstractVector, dist; σ = 12.0, β = 15)
 	# this is a function of the nearest neighbors, doing gaussian convolution and taking a β-maximum of the weighted neighbors. 
 	# The hope is that this reduces the variation from the p-noise.
 	# increasing σ and increasing β smooth out the bad regions more or less.
 	# PARARMETERS p_min = minimum weighted probability of being normal tissue
 	# d_min = maximum distance of the 4th nearest neighbor
-	p_min = 0.20
-	d_min = 200 # curently super slack (we are not filtering anything)
+	# small d_min removes isolated clusters of less than 4 cells.
+	p_min = 0.84
+	d_min = 20 # curently super slack (we are not filtering anything)
 	log(dot(softmax( (- dist ./ σ) .^2 ), exp.(β .* pval))) / β > p_min && dist[4] < d_min
 end
 
@@ -187,8 +196,7 @@ begin
 	df_joined.cell_included .= true
 	if have_ilastik # If we have illastik data to attatch to cells...
 	for df_image in groupby(df_joined,:Image)
-		xx = permutedims(Matrix(select(df_image,r"centroid-0",r"centroid-1")))
-		inds, dist = knn(KDTree(xx), xx, 45, true)
+		inds, dist = knn_dict[first(df_image.Image)]
 		pvals = map(x->df_image.p_normal[x],
 			stack(inds))
 		df_image.cell_included .= map(rejectioncrit, eachcol(pvals), dist)
@@ -230,7 +238,7 @@ end
 
 # ╔═╡ c04a27af-a7cd-4e42-8783-39ea326668db
 if have_ilastik
-let rows = 1, cols = 4
+let rows = 8, cols = 6
 	start = 15; finish = start + rows*cols
 	println.(eachrow(reshape(start+1:finish,(rows,cols))))
 	reshape([ilastik_image(i) for i in unique(df_joined.Image)[start+1:finish]],(rows,cols))
@@ -251,14 +259,17 @@ let fig = Figure()
 	fig
 end
 
+# ╔═╡ f98c3501-521a-4fe4-aafd-7bb3d6c6b0a8
+
+
 # ╔═╡ 74d18f8f-50ad-4402-8034-651f97efc0e0
 if have_ilastik
-let df_image = groupby(df_joined,:Image)[15]
+let df_image = groupby(df_joined,:Image)[58]
 	xx = permutedims(Matrix(select(df_image,r"centroid-0",r"centroid-1")))
 	inds, dist = knn(KDTree(xx), xx, 45, true)
 	pvals = map(x->df_image.p_normal[x], stack(inds))
 	included = map(rejectioncrit, eachcol(pvals), dist)
-	scatter(xx[2,:],xx[1,:], color = included .+ 1, aspectratio = 1.0, markersize = 2)
+	scatter(xx[2,:],xx[1,:], color = included .+ 1, aspectratio = 1.0, markersize = 8)
 end
 end
 
@@ -2408,6 +2419,7 @@ version = "3.6.0+0"
 # ╠═538709af-4514-4183-bb57-5b273e9129ba
 # ╠═41113068-e52f-4f27-84b1-e4e642dd78d0
 # ╠═a3402ed3-3452-47e7-b6ae-ae7e33a5076e
+# ╠═5a09e808-b84a-4134-87db-adc08818d9b5
 # ╠═47e2b91e-1d22-4410-b699-be06f3e09087
 # ╠═97ab2999-ddd0-4db1-848a-d4b7980acfde
 # ╟─3250de1c-8c1b-45d0-9886-c57848de352f
@@ -2424,6 +2436,7 @@ version = "3.6.0+0"
 # ╟─f8054f20-8c72-458f-87ef-d12effec38a6
 # ╠═751b682c-ff2d-4226-aa95-8fcb4db451e0
 # ╠═2a035a17-ae0b-4868-b6ff-05ad94d28f6d
+# ╠═f98c3501-521a-4fe4-aafd-7bb3d6c6b0a8
 # ╠═74d18f8f-50ad-4402-8034-651f97efc0e0
 # ╠═58641e8d-707f-494a-b535-8faa6d0e798e
 # ╠═babed64d-51a1-49c4-b756-cba3ebe93fe8

@@ -63,6 +63,9 @@ let
 	global clusteron = setdiff(targets, ["DNA1"]) # don't cluster on these
 end
 
+# ╔═╡ ab344b77-5628-4d71-8097-d225e8c514e7
+hist(df.CD4)
+
 # ╔═╡ ccbc0bd6-3cf0-48d5-a35e-885606e7f2e8
 begin
 	g = Figure(size = (500,2700))
@@ -148,12 +151,12 @@ end
 
 # ╔═╡ 9f351f31-72a5-420e-acdf-e17da011fcdd
 color_dictionary = Dict(
-	"Treg" => cs[10],
-	"T(CD4+)" => cs[7],
+	"Treg" => cs[7],
+	"T(CD4+)" => cs[1],
 	"Endo" => cs[5],
 	"Stromal" => 1.2*cs[20],
 	"Neut" => cs[6],
-	"Macro" => cs[12],
+	"M1" => cs[12],
 	"M2" => cs[9],
 	"B/Tumor" => cs[16],
 	"Mono" => cs[11],
@@ -415,55 +418,48 @@ end
 begin
 	children_1 	= ("OK1","Dark")
 	scale_1 	= 
-		Dict("CD45" =>1 ,"CD68"=>1, "CD163" => 3, "CD14" => 2, "TIM3" => 2)
-	@bind lines_1 boundinglines(1, [1,200])
+		Dict("CD45" =>1 ,"HistH3"=>5, "CD34" => 3, "CD14" => 2, "TIM3" => 2, "Collagen"=>4)
+	@bind lines_1 boundinglines(1, [2,198])
 end
 
 # ╔═╡ eba21afe-8fc6-49b7-a419-c06efd3f7a44
 begin
 	children_2 	= ("CD3+","CD3-")
 	scale_2	= 
-		Dict("CD3"=>7, "CD20"=> 2.5, "CD19"=> 2, "CD7"=>5, "CD45"=> 3, "CD68"=>3.5,"CD4"=> 6, "CD8a"=> 4)
-	@bind lines_2 boundinglines(2, [172,200])
+		Dict("CD3"=>5.5, "CD20"=> 2.5, "CD19"=> 2, "CD7"=>5, "CD45"=> 3, "CD68"=>4,"CD4"=> 5, "CD8a"=> 4.5)
+	@bind lines_2 boundinglines(2, [151,197])
 end
 
 # ╔═╡ e3567477-f45a-41ff-9254-88862b58ffc0
 begin
 	children_5 	= ("CD68+","CD68-")
 	scale_5	= 
-		Dict("CD3"=>0, "CD20"=> 2, "CD19"=> 2, "CD66b"=> 2, "GrzB" =>2 ,"CD68"=>4.7,"CD11c"=>3, "CD11b"=>4,"Collagen"=>2, "CD163"=>2, "CD16"=>2,"CD21"=>1, "FOXP3"=>2,"CD4"=> 0, "CD8a"=> 0, "SOX11" => 1,"CD34"=>1, "Ki67"=>1, "CyclinD1"=>1, "TIM3"=>-1, "TIGIT" => -1,"PD1" => -1,"VISTA" => -2)
-	@bind lines_5 boundinglines(5,[1,14])
+		Dict("CD3"=>0, "CD20"=> 2, "CD19"=> 2, "CD66b"=> 2, "GrzB" =>2 ,"CD68"=>5,"CD11c"=>3, "CD11b"=>4,"Collagen"=>2, "CD163"=>2, "CD16"=>2,"CD21"=>1, "FOXP3"=>2)
+	@bind lines_5 boundinglines(5,[132,155])
 end
 
 # ╔═╡ 911e29ef-bb39-46da-8d5f-7cfa06dca648
 begin
-	children_10 	= ("M2","Macro")
+	children_10 	= ("M2","M1")
 	scale_10	= 
 		Dict("CD11c"=> 4, "CD14" => 3, "CD11b" => 2, "CD163" => 4,"CD68"=> 1)
-	@bind lines_10 boundinglines(10, [25,32])
+	@bind lines_10 boundinglines(10, [17,20])
 end
 
 # ╔═╡ bf37292c-572a-4f8e-a5a3-033729f97034
 begin
 	children_11 	= ("Neut","CD66b-")
 	scale_11	= 
-		Dict("CD20"=>4, "CD66b"=>3)
-	@bind lines_11 boundinglines(11, [55,55])
+		Dict("CD20"=>4, "CD66b"=>4)
+	@bind lines_11 boundinglines(11, [131,131])
 end
 
 # ╔═╡ f5b39dce-78f5-494b-a987-500d844c48df
 begin
-	children_23 	= ("Other","Endo+")
+	children_23 	= ("Other","Endo")
 	scale_23	= 
 		Dict("CD20"=>4, "CD34"=>5, "PDL1"=>0, "CD163"=>0)
-	@bind lines_23 boundinglines(23, [1,104])
-end
-
-# ╔═╡ b670cc33-599a-49e4-907c-fdfbb52a1635
-begin
-	children_47 	= ("B/Tumor","Endo")
-	scale_47 = Dict("CD20"=>4, "CD34"=>5, "PDL1"=>2, "CD163"=>2)
-	@bind lines_47 boundinglines(47, [4,5])
+	@bind lines_23 boundinglines(23, [1,125])
 end
 
 # ╔═╡ 330a7d1e-38e4-4751-aaec-60f7d715f47b
@@ -471,76 +467,54 @@ begin
 	children_46 	= ("Other","Stromal")
 	scale_46	= 
 		Dict("Collagen"=>4, "CD20" => 3)
-	@bind lines_46 boundinglines(46, [1,94])
+	@bind lines_46 boundinglines(46, [1,112])
 end
 
 # ╔═╡ 26c6a861-caef-4705-9f56-49bcc045e820
 begin
 	children_92 	= ("Dendritic","AllB")
 	scale_92	= 
-		Dict("CD20" => 2, "CD11c"=>3, "CD11b"=>2)
-	@bind lines_92 boundinglines(92, [1,8])
+		Dict("CD20" => 2, "CD11c"=>4, "CD11b"=>3)
+	@bind lines_92 boundinglines(92, [97,112])
 end
 
 # ╔═╡ 31d2fdcd-7272-4c40-8c62-cb7596b58f94
 begin
-	children_185 	= ("B/FDC+","B/Tumor+")
+	children_185 	= ("B/FDC","B/Tumor+")
 	scale_185	= 
 		Dict("CD20" => 2, "CD21"=>3, "CyclinD1"=>1)
-	@bind lines_185 boundinglines(185, [1,17])
-end
-
-# ╔═╡ 5235c920-d584-4d30-8033-68be9d3fb320
-begin
-	children_370 	= ("Bright","B/FDC")
-	scale_370	= 
-		Dict("CD20" => 2, "CD45"=>3, "CyclinD1"=>1)
-	@bind lines_370 boundinglines(370, [17,17])
+	@bind lines_185 boundinglines(185, [82,97])
 end
 
 # ╔═╡ 986b6b97-c0a4-41ef-acdb-6583e71b041c
 begin
 	children_371 	= ("Mono","B/Tumor")
 	scale_371	= 
-		Dict("Sox11" => 2, "CyclinD1"=>2, "Ki67"=>1)
-	@bind lines_371 boundinglines(371, [33,33])
+		Dict("CD16" => 2)
+	@bind lines_371 boundinglines(371, [80,82])
 end
 
 # ╔═╡ 7f6a63c5-560b-4921-94da-f81f58240224
 begin
-	children_4 	= ("T(CD8+)","T(CD4+)") # TCell subcluster 
+	children_4 	= ("T(CD8+)","CD4+") # TCell subcluster 
 	scale_4	= 
-		Dict("CD8a" => 5, "CD)4" => 4)
-	@bind lines_4 boundinglines(4, [1,15])
+		Dict("CD8a" => 3, "CD4" => 3,"HistH3"=>1)
+	@bind lines_4 boundinglines(4, [1,25])
 end
 
 # ╔═╡ d7a8145a-96e5-4617-becb-dbb470d96164
 begin
-	children_9 	= ("T(CD4+PD1+)","CD4+")
+	children_9 	= ("T(CD4+)","CD4+FOXP3+")
 	scale_9	= 
-		 Dict("PD1" => 4, "TIGIT" =>2, "CD21"=>2)
-	@bind lines_9 boundinglines(9, [22,33])
+		 Dict("PD1" => 2, "FOXP3" =>3, "CD21"=>1,"HistH3"=>2,"CD68"=>2, )
+	@bind lines_9 boundinglines(9, [8,23])
 end
 
 # ╔═╡ fe1ed2f1-88ae-4c0f-b751-bf2628b3d328
 begin
-	children_19 	= ("Treg","T(CD4+PD1-)")
-	scale_19	= Dict("FOXP3" => 4, "TIGIT" =>2)
-	@bind lines_19 boundinglines(19, [1,4])
-end
-
-# ╔═╡ 3ae0848f-17cb-429c-a498-caf824974804
-begin
-	children_8 	= ("CD8+","Bright")
-	scale_8	= Dict()
-	@bind lines_8 boundinglines(8, [3,27])
-end
-
-# ╔═╡ 52652d53-3db8-4769-a68a-e3de8c5aa858
-begin
-	children_16 	= ("T(CD8+PD1+)","T(CD8+)")
-	scale_16	= Dict("PD1"=> 4, "TIM3"=>2,"CD45RO" => 3)
-	@bind lines_16 boundinglines(16, [1,10])
+	children_19 	= ("Treg","Unknown")
+	scale_19	= Dict("FOXP3" => 4,"CD4"=>3 ,"TIGIT" =>2)
+	@bind lines_19 boundinglines(19, [3,10])
 end
 
 # ╔═╡ 1c906127-b043-49e0-ac16-bdef4764f119
@@ -574,9 +548,6 @@ begin # here will be the history of our
 	define_node(cluster_tree, 46, scale_46, lines_46,  
 		children = children_46) # (_,Stromal)
 
-	define_node(cluster_tree, 47, scale_47, lines_47,  
-		children = children_47) # (Endo, Bright)
-
 
 	define_node(cluster_tree, 92, scale_92, lines_92,  
 		children = children_92) # (Dendritic,_)
@@ -586,19 +557,10 @@ begin # here will be the history of our
 
 	define_node(cluster_tree, 19, scale_19, lines_19,  
 		children = children_19) # (Treg,_)
-	
-	define_node(cluster_tree, 8, scale_8, lines_8,  
-		children = children_8) # T(CD8+)
-
-	define_node(cluster_tree, 16, scale_16, lines_16,  
-		children = children_16) # ( T(CD8+PD1+) , T(CD8+) )
-		
-	define_node(cluster_tree, 370, scale_370, lines_370,  
-		children = children_370) # ( Bright, B / FDC )
 
 	define_node(cluster_tree, 371, scale_371, lines_371,  
 		children = children_371) # ( Monocytes, B / Tumor)
-end
+end;
 
 # ╔═╡ 591b2c61-3ae3-4c70-9af5-6ef76fdfe611
 let tp = treeplot(cluster_tree)
@@ -608,9 +570,6 @@ end
 
 # ╔═╡ da7dcf1c-0433-456e-9a6f-58c0f7e97db3
 node_view(cluster_tree,1)
-
-# ╔═╡ 8e46215e-641c-4002-b826-b607356fe120
-cluster_tree[3].included
 
 # ╔═╡ 8749b389-7915-4b69-b9ba-b1688c2600c6
 node_view(cluster_tree,2)
@@ -634,19 +593,10 @@ node_view(cluster_tree,21)
 node_view(cluster_tree,11)
 
 # ╔═╡ cd728e28-c89c-4c8a-a911-7c11605ef69d
-dotplot(cluster_tree,11, y ="CD163", x ="CD16")
-
-# ╔═╡ b60a01a5-8962-4ecc-b9b3-959389147984
-dotplot(cluster_tree,11, y ="PDL1", x ="B7H3")
+dotplot(cluster_tree,11, y ="CD66b", x ="CD68")
 
 # ╔═╡ c2f767a7-de10-4bb6-a06c-f3036c3199bb
 node_view(cluster_tree,23)
-
-# ╔═╡ b79c0a0d-a80b-42aa-b20d-8e0abe13848d
-dotplot(cluster_tree,2*23+1, x = "PDL1", y = "CD163")
-
-# ╔═╡ c870922e-18ee-4532-af7a-09651fa74c73
-node_view(cluster_tree,2*23+1)
 
 # ╔═╡ bee52c29-8903-420d-a031-2bdb322b7373
 node_view(cluster_tree,46)
@@ -656,9 +606,6 @@ node_view(cluster_tree,92)
 
 # ╔═╡ e566fecc-0095-42f3-8668-f0c9a25a5572
 node_view(cluster_tree,185)
-
-# ╔═╡ c74d1883-cf1c-4a87-b633-374a071f19ea
-node_view(cluster_tree,2*185)
 
 # ╔═╡ a91c9fb7-461a-4aa7-8cd4-599702042438
 node_view(cluster_tree,371)
@@ -672,23 +619,28 @@ dotplot(cluster_tree,4, x = "CD8a", y = "CD4")
 # ╔═╡ b88973a7-1289-456a-a3f7-8ba92243084a
 node_view(cluster_tree,9)
 
-# ╔═╡ 1ec0ee00-1fcb-4d7b-ba93-e45143c0fcb3
-dotplot(cluster_tree,9, x = "PD1", y = "CD45")
-
 # ╔═╡ 917286d4-edb5-48e3-8e03-ed6a38cb3cd8
 node_view(cluster_tree,19)
 
 # ╔═╡ 804fa862-acc4-4d92-88ff-cbbd9a155c26
-dotplot(cluster_tree,19, x = "FoxP3", y = "PD1")
+dotplot(cluster_tree,19, x = "FOXP3", y = "PD1")
 
 # ╔═╡ 53b5721f-b2e8-457f-8f9f-c5e4c51e3cd4
 node_view(cluster_tree,8)
 
-# ╔═╡ d0839e15-4269-4e5a-93c6-8be1be06353b
-node_view(cluster_tree,16)
+# ╔═╡ 3ae0848f-17cb-429c-a498-caf824974804
+begin
+	children_8 	= ("CD8+","Bright")
+	scale_8	= Dict()
+	@bind lines_8 boundinglines(8, [3,27])
+end
 
-# ╔═╡ 5737d295-dafd-4d9b-8e5d-4a19c9248188
-dotplot(cluster_tree,16, x = "CD8a", y = "PD1")
+# ╔═╡ 52652d53-3db8-4769-a68a-e3de8c5aa858
+begin
+	children_16 	= ("T(CD8+PD1+)","T(CD8+)")
+	scale_16	= Dict("PD1"=> 4, "TIM3"=>2,"CD45RO" => 3)
+	@bind lines_16 boundinglines(16, [1,10])
+end
 
 # ╔═╡ bbe9bd0f-9a7d-4972-9d3b-63a5fc648ad8
 md"""
@@ -2354,6 +2306,7 @@ version = "3.6.0+0"
 # ╟─72dfe345-52c4-4611-9664-6f66abc5468f
 # ╠═351bb231-931f-4759-8005-15ad991f9a48
 # ╠═dfbf5da0-674f-4b1d-bb55-978cfe1c35f3
+# ╠═ab344b77-5628-4d71-8097-d225e8c514e7
 # ╠═ccbc0bd6-3cf0-48d5-a35e-885606e7f2e8
 # ╟─70c9e039-7d20-4d35-9b05-5ae304c9525f
 # ╠═90a7d98c-25a1-4e34-bebb-718d2d22f231
@@ -2373,7 +2326,6 @@ version = "3.6.0+0"
 # ╠═1c906127-b043-49e0-ac16-bdef4764f119
 # ╠═7fbe6a16-6050-4e2d-9c8f-7e18ce960a69
 # ╠═da7dcf1c-0433-456e-9a6f-58c0f7e97db3
-# ╠═8e46215e-641c-4002-b826-b607356fe120
 # ╠═eba21afe-8fc6-49b7-a419-c06efd3f7a44
 # ╠═8749b389-7915-4b69-b9ba-b1688c2600c6
 # ╠═91e577f0-8b2c-4c44-9486-b04713366e30
@@ -2387,12 +2339,8 @@ version = "3.6.0+0"
 # ╠═bf37292c-572a-4f8e-a5a3-033729f97034
 # ╠═2a243057-f678-4bd9-80e9-c7571efb6abe
 # ╠═cd728e28-c89c-4c8a-a911-7c11605ef69d
-# ╠═b60a01a5-8962-4ecc-b9b3-959389147984
 # ╠═f5b39dce-78f5-494b-a987-500d844c48df
 # ╠═c2f767a7-de10-4bb6-a06c-f3036c3199bb
-# ╠═b670cc33-599a-49e4-907c-fdfbb52a1635
-# ╠═b79c0a0d-a80b-42aa-b20d-8e0abe13848d
-# ╠═c870922e-18ee-4532-af7a-09651fa74c73
 # ╟─9bb15c18-ca76-4bd6-871d-a14de6b81e9e
 # ╠═330a7d1e-38e4-4751-aaec-60f7d715f47b
 # ╠═bee52c29-8903-420d-a031-2bdb322b7373
@@ -2403,8 +2351,6 @@ version = "3.6.0+0"
 # ╟─022b6c87-15cc-41cc-92cd-da74c5a95170
 # ╠═31d2fdcd-7272-4c40-8c62-cb7596b58f94
 # ╠═e566fecc-0095-42f3-8668-f0c9a25a5572
-# ╠═5235c920-d584-4d30-8033-68be9d3fb320
-# ╠═c74d1883-cf1c-4a87-b633-374a071f19ea
 # ╠═986b6b97-c0a4-41ef-acdb-6583e71b041c
 # ╠═a91c9fb7-461a-4aa7-8cd4-599702042438
 # ╠═cbd58cc9-fdb5-4b42-9222-eedd01e7db42
@@ -2413,7 +2359,6 @@ version = "3.6.0+0"
 # ╠═dcd5f1f4-deda-45ad-8d88-10545906c746
 # ╠═d7a8145a-96e5-4617-becb-dbb470d96164
 # ╠═b88973a7-1289-456a-a3f7-8ba92243084a
-# ╠═1ec0ee00-1fcb-4d7b-ba93-e45143c0fcb3
 # ╠═a6a50c9b-d509-4ca3-b1bd-5e8361130f74
 # ╠═fe1ed2f1-88ae-4c0f-b751-bf2628b3d328
 # ╠═917286d4-edb5-48e3-8e03-ed6a38cb3cd8
@@ -2423,8 +2368,6 @@ version = "3.6.0+0"
 # ╠═53b5721f-b2e8-457f-8f9f-c5e4c51e3cd4
 # ╟─f4ac3998-9cda-455e-a76c-b5a09dd9b450
 # ╠═52652d53-3db8-4769-a68a-e3de8c5aa858
-# ╠═d0839e15-4269-4e5a-93c6-8be1be06353b
-# ╠═5737d295-dafd-4d9b-8e5d-4a19c9248188
 # ╠═e6e529e2-c892-4643-a39b-0ebc720fab03
 # ╠═bd95d563-48d1-409b-bff9-bdc4d253d82f
 # ╠═c5bd0c23-4eb2-4caf-b5b6-56a677e5f950

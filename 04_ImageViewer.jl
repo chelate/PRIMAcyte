@@ -59,6 +59,9 @@ main {
 </style>
 """
 
+# ╔═╡ ffa0ad42-6512-4312-8204-2515ac3f1f4d
+mkpath(joinpath(@__DIR__,"plots","images"))
+
 # ╔═╡ 9fcdd12a-cd55-47b4-a98a-6d1c84f4b436
 TableOfContents()
 
@@ -132,9 +135,6 @@ md"""
 
 # ╔═╡ da0cc366-5471-4f93-bc6d-74739910cffb
 @bind highlighted MultiCheckBox(sort(unique(df_clustered.cluster_index)))
-
-# ╔═╡ 7d73f953-4365-433d-b7f4-0716c79805f0
-
 
 # ╔═╡ b558f09a-9468-4b49-915b-a614ee009618
 md"""
@@ -328,7 +328,7 @@ begin # initialize csdict_saved
 if in(readdir(joinpath(@__DIR__,"data")))("colorschemes.jld2") # if the file exists
  	JLD2.@load joinpath(@__DIR__,"data","colorschemes.jld2") csdict_saved
 	else # initialize the file
-	csdict_saved = Dict{String, Dict{String, HSV{Float32}}}()
+	csdict_saved = Dict(""=>Dict{String, HSV{Float32}}())
 	JLD2.@save joinpath(@__DIR__,"data","colorschemes.jld2") csdict_saved
 end
 available_keys = Ref{Vector{String}}([])
@@ -2586,8 +2586,9 @@ version = "3.5.0+0"
 # ╠═cbe74fb5-972f-4127-a6c7-0c50cf8522cb
 # ╠═28214a08-028a-415c-b294-8a290931e8eb
 # ╠═9a87684f-a7e6-4301-af1c-06166546f344
+# ╠═ffa0ad42-6512-4312-8204-2515ac3f1f4d
 # ╠═9fcdd12a-cd55-47b4-a98a-6d1c84f4b436
-# ╟─7bce7789-58d5-49e7-b0cc-f38f2829f0db
+# ╠═7bce7789-58d5-49e7-b0cc-f38f2829f0db
 # ╠═73279267-ba04-47da-9bba-81a1bc26269c
 # ╟─34f5a972-1aba-4dc3-8fa2-4de502f5f26e
 # ╠═43d75174-d346-40cf-ab10-40c50adf5b4f
@@ -2596,7 +2597,7 @@ version = "3.5.0+0"
 # ╟─9e355daf-ada9-4519-b186-2512a63a6747
 # ╟─2199af3d-9756-428b-8ecd-18fb34013abb
 # ╟─714ed9c9-7307-482c-b9dc-5c5027aae3e0
-# ╟─a629f092-4613-4a67-a366-910b7184302c
+# ╠═a629f092-4613-4a67-a366-910b7184302c
 # ╟─f501dad3-6a8f-43a6-9931-75cdc7451769
 # ╟─ffd766c6-e030-484b-a769-0bd3bad19fa4
 # ╟─31c82837-417a-4da4-b713-448baaf377ea
@@ -2617,7 +2618,6 @@ version = "3.5.0+0"
 # ╟─0c29afcf-c687-4776-b870-84583727592c
 # ╟─da0cc366-5471-4f93-bc6d-74739910cffb
 # ╠═3eaceb5b-1d1d-4302-b542-118f79092527
-# ╠═7d73f953-4365-433d-b7f4-0716c79805f0
 # ╠═b558f09a-9468-4b49-915b-a614ee009618
 # ╠═f799657d-681e-42a2-9261-f1ab1c11421f
 # ╟─4d9deb1e-77e6-44ca-9d7d-fbb7101e4f39
