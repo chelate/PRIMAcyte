@@ -420,7 +420,7 @@ begin
 	children_2 	= ("CD3+","CD3-")
 	scale_2	= 
 		Dict("CD3"=>5.5, "CD20"=> 2.5, "CD19"=> 2, "CD7"=>5, "CD45"=> 3, "CD68"=>4,"CD4"=> 5, "CD8a"=> 4.5)
-	@bind lines_2 boundinglines(2, [151,197])
+	@bind lines_2 boundinglines(2, [144,198])
 end
 
 # ╔═╡ e3567477-f45a-41ff-9254-88862b58ffc0
@@ -428,7 +428,7 @@ begin
 	children_5 	= ("CD68+","CD68-")
 	scale_5	= 
 		Dict("CD3"=>0, "CD20"=> 2, "CD19"=> 2, "CD66b"=> 2, "GrzB" =>2 ,"CD68"=>5,"CD11c"=>3, "CD11b"=>4,"Collagen"=>2, "CD163"=>2, "CD16"=>2,"CD21"=>1, "FOXP3"=>2)
-	@bind lines_5 boundinglines(5,[132,155])
+	@bind lines_5 boundinglines(5,[1,22])
 end
 
 # ╔═╡ 911e29ef-bb39-46da-8d5f-7cfa06dca648
@@ -436,7 +436,7 @@ begin
 	children_10 	= ("M2","M1")
 	scale_10	= 
 		Dict("CD11c"=> 4, "CD14" => 3, "CD11b" => 2, "CD163" => 4,"CD68"=> 1)
-	@bind lines_10 boundinglines(10, [17,20])
+	@bind lines_10 boundinglines(10, [20,23])
 end
 
 # ╔═╡ bf37292c-572a-4f8e-a5a3-033729f97034
@@ -444,15 +444,15 @@ begin
 	children_11 	= ("Neut","CD66b-")
 	scale_11	= 
 		Dict("CD20"=>4, "CD66b"=>4)
-	@bind lines_11 boundinglines(11, [131,131])
+	@bind lines_11 boundinglines(11, [1,1])
 end
 
 # ╔═╡ f5b39dce-78f5-494b-a987-500d844c48df
 begin
 	children_23 	= ("Other","Endo")
 	scale_23	= 
-		Dict("CD20"=>4, "CD34"=>5, "PDL1"=>0, "CD163"=>0)
-	@bind lines_23 boundinglines(23, [1,125])
+		Dict("CD20"=>4, "CD34"=>4, "PDL1"=>0, "CD16"=>4,"CD14"=>3)
+	@bind lines_23 boundinglines(23, [8,120])
 end
 
 # ╔═╡ 330a7d1e-38e4-4751-aaec-60f7d715f47b
@@ -460,7 +460,7 @@ begin
 	children_46 	= ("Other","Stromal")
 	scale_46	= 
 		Dict("Collagen"=>4, "CD20" => 3)
-	@bind lines_46 boundinglines(46, [1,112])
+	@bind lines_46 boundinglines(46, [1,100])
 end
 
 # ╔═╡ 26c6a861-caef-4705-9f56-49bcc045e820
@@ -468,7 +468,7 @@ begin
 	children_92 	= ("Dendritic","AllB")
 	scale_92	= 
 		Dict("CD20" => 2, "CD11c"=>4, "CD11b"=>3)
-	@bind lines_92 boundinglines(92, [97,112])
+	@bind lines_92 boundinglines(92, [90,112])
 end
 
 # ╔═╡ 31d2fdcd-7272-4c40-8c62-cb7596b58f94
@@ -476,15 +476,15 @@ begin
 	children_185 	= ("B/FDC","B/Tumor+")
 	scale_185	= 
 		Dict("CD20" => 2, "CD21"=>3, "CyclinD1"=>1)
-	@bind lines_185 boundinglines(185, [82,97])
+	@bind lines_185 boundinglines(185, [83,97])
 end
 
 # ╔═╡ 986b6b97-c0a4-41ef-acdb-6583e71b041c
 begin
 	children_371 	= ("Mono","B/Tumor")
 	scale_371	= 
-		Dict("CD16" => 2)
-	@bind lines_371 boundinglines(371, [80,82])
+		Dict("CD16" => 2,"CD14" => 4)
+	@bind lines_371 boundinglines(371, [80,83])
 end
 
 # ╔═╡ 7f6a63c5-560b-4921-94da-f81f58240224
@@ -492,22 +492,22 @@ begin
 	children_4 	= ("T(CD8+)","CD4+") # TCell subcluster 
 	scale_4	= 
 		Dict("CD8a" => 3, "CD4" => 3,"HistH3"=>1)
-	@bind lines_4 boundinglines(4, [1,25])
+	@bind lines_4 boundinglines(4, [1,22])
 end
 
 # ╔═╡ d7a8145a-96e5-4617-becb-dbb470d96164
 begin
 	children_9 	= ("T(CD4+)","CD4+FOXP3+")
 	scale_9	= 
-		 Dict("PD1" => 2, "FOXP3" =>3, "CD21"=>1,"HistH3"=>2,"CD68"=>2, )
-	@bind lines_9 boundinglines(9, [8,23])
+		 Dict("PD1" => 2, "FOXP3" =>3, "CD21"=>1,"HistH3"=>0,"CD68"=>2, )
+	@bind lines_9 boundinglines(9, [8,33])
 end
 
 # ╔═╡ fe1ed2f1-88ae-4c0f-b751-bf2628b3d328
 begin
-	children_19 	= ("Treg","Unknown")
-	scale_19	= Dict("FOXP3" => 4,"CD4"=>3 ,"TIGIT" =>2)
-	@bind lines_19 boundinglines(19, [3,10])
+	children_19 	= ("Treg","B/Tumor")
+	scale_19	= Dict("FOXP3" => 4,"GrzB"=>5 ,"PDL1" =>5)
+	@bind lines_19 boundinglines(19, [1,5])
 end
 
 # ╔═╡ 1c906127-b043-49e0-ac16-bdef4764f119
@@ -616,7 +616,7 @@ node_view(cluster_tree,9)
 node_view(cluster_tree,19)
 
 # ╔═╡ 804fa862-acc4-4d92-88ff-cbbd9a155c26
-dotplot(cluster_tree,19, x = "FOXP3", y = "PD1")
+dotplot(cluster_tree,19, x = "FOXP3", y = "PDL1")
 
 # ╔═╡ 53b5721f-b2e8-457f-8f9f-c5e4c51e3cd4
 node_view(cluster_tree,8)
@@ -687,7 +687,6 @@ Clustering = "~0.15.7"
 ColorSchemes = "~3.26.0"
 ColorTypes = "~0.11.5"
 DataFrames = "~1.7.0"
-GraphMakie = "~0.5.12"
 Graphs = "~1.12.0"
 JLD2 = "~0.5.5"
 NetworkLayout = "~0.4.6"
@@ -700,9 +699,9 @@ ThreadPools = "~2.1.1"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.2"
+julia_version = "1.10.5"
 manifest_format = "2.0"
-project_hash = "ca4cc521a882b3747ac4d24b7f602eb7ea61a854"
+project_hash = "67718636b5b45b8540d3df1a31e56067689d5fb8"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -821,9 +820,9 @@ version = "1.1.0"
 
 [[deps.CairoMakie]]
 deps = ["CRC32c", "Cairo", "Cairo_jll", "Colors", "FileIO", "FreeType", "GeometryBasics", "LinearAlgebra", "Makie", "PrecompileTools"]
-git-tree-sha1 = "2b04b60ed9d3e977f93e34952971b608c34b3401"
+git-tree-sha1 = "7947d2b61995eda7d5ca50c697b12bb578b918e5"
 uuid = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
-version = "0.12.13"
+version = "0.12.14"
 
 [[deps.Cairo_jll]]
 deps = ["Artifacts", "Bzip2_jll", "CompilerSupportLibraries_jll", "Fontconfig_jll", "FreeType2_jll", "Glib_jll", "JLLWrappers", "LZO_jll", "Libdl", "Pixman_jll", "Xorg_libXext_jll", "Xorg_libXrender_jll", "Zlib_jll", "libpng_jll"]
@@ -900,7 +899,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.0+0"
+version = "1.1.1+0"
 
 [[deps.ConstructionBase]]
 git-tree-sha1 = "76219f1ed5771adbb096743bff43fb5fdd4c1157"
@@ -1045,9 +1044,9 @@ version = "3.3.10+1"
 
 [[deps.FileIO]]
 deps = ["Pkg", "Requires", "UUIDs"]
-git-tree-sha1 = "82d8afa92ecf4b52d78d869f038ebfb881267322"
+git-tree-sha1 = "62ca0547a14c57e98154423419d8a342dca75ca9"
 uuid = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
-version = "1.16.3"
+version = "1.16.4"
 
 [[deps.FilePaths]]
 deps = ["FilePathsBase", "MacroTools", "Reexport", "Requires"]
@@ -1364,9 +1363,9 @@ version = "0.5.5"
 
 [[deps.JLLWrappers]]
 deps = ["Artifacts", "Preferences"]
-git-tree-sha1 = "f389674c99bfcde17dc57454011aa44d5a260a40"
+git-tree-sha1 = "be3dc50a92e5a386872a493a10050136d4703f9b"
 uuid = "692b3bcd-3c85-4b1f-b108-f13ce0eb3210"
-version = "1.6.0"
+version = "1.6.1"
 
 [[deps.JSON]]
 deps = ["Dates", "Mmap", "Parsers", "Unicode"]
@@ -1529,9 +1528,9 @@ version = "0.5.13"
 
 [[deps.Makie]]
 deps = ["Animations", "Base64", "CRC32c", "ColorBrewer", "ColorSchemes", "ColorTypes", "Colors", "Contour", "Dates", "DelaunayTriangulation", "Distributions", "DocStringExtensions", "Downloads", "FFMPEG_jll", "FileIO", "FilePaths", "FixedPointNumbers", "Format", "FreeType", "FreeTypeAbstraction", "GeometryBasics", "GridLayoutBase", "ImageBase", "ImageIO", "InteractiveUtils", "Interpolations", "IntervalSets", "Isoband", "KernelDensity", "LaTeXStrings", "LinearAlgebra", "MacroTools", "MakieCore", "Markdown", "MathTeXEngine", "Observables", "OffsetArrays", "Packing", "PlotUtils", "PolygonOps", "PrecompileTools", "Printf", "REPL", "Random", "RelocatableFolders", "Scratch", "ShaderAbstractions", "Showoff", "SignedDistanceFields", "SparseArrays", "Statistics", "StatsBase", "StatsFuns", "StructArrays", "TriplotBase", "UnicodeFun", "Unitful"]
-git-tree-sha1 = "50ebda951efaa11b6db0413c1128726b8eab3bf0"
+git-tree-sha1 = "3df66da15ba7b37b34f6557b7e1c95a3ff5c670b"
 uuid = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
-version = "0.21.13"
+version = "0.21.14"
 
 [[deps.MakieCore]]
 deps = ["ColorTypes", "GeometryBasics", "IntervalSets", "Observables"]
@@ -2084,9 +2083,9 @@ version = "2.1.1"
 
 [[deps.TiffImages]]
 deps = ["ColorTypes", "DataStructures", "DocStringExtensions", "FileIO", "FixedPointNumbers", "IndirectArrays", "Inflate", "Mmap", "OffsetArrays", "PkgVersion", "ProgressMeter", "SIMD", "UUIDs"]
-git-tree-sha1 = "bc7fd5c91041f44636b2c134041f7e5263ce58ae"
+git-tree-sha1 = "38f139cc4abf345dd4f22286ec000728d5e8e097"
 uuid = "731e570b-9d59-4bfa-96dc-6df516fadf69"
-version = "0.10.0"
+version = "0.10.2"
 
 [[deps.TranscodingStreams]]
 git-tree-sha1 = "0c45878dcfdcfa8480052b6ab162cdd138781742"
@@ -2238,7 +2237,7 @@ version = "0.15.2+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.8.0+1"
+version = "5.11.0+0"
 
 [[deps.libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]

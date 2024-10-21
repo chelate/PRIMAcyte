@@ -117,6 +117,9 @@ md"""
 # ╔═╡ c0170387-a1d1-4f17-a41c-ae3875c2034a
 @bind cellbits MultiCheckBox(["cells","save image"])
 
+# ╔═╡ 7fc73803-e6ac-40ca-9ac4-53f962fec79d
+cols
+
 # ╔═╡ 0aecf292-b442-4b9a-b690-06e061a6af50
 @bind value_scale Slider(range(1,0,20))
 
@@ -265,8 +268,10 @@ end
 # ╔═╡ 8272ba6b-b303-43ad-8b3f-a96e28e387e0
 begin 
 	labs = sort(collect(keys(cols)))
+	push!(labs,"Highlight")
 	push!(labs,"Unknown")
-	swatches = [CairoMakie.PolyElement(color = get(cols,l,unknown_color), strokewidth = 0) for l in labs]
+	push!(cols,"Unknown" => unknown_color)
+	swatches = [CairoMakie.PolyElement(color = get(cols,l,highlight), strokewidth = 0) for l in labs]
 	cell_type_legend = CairoMakie.Figure(size = (500,250))
 	CairoMakie.Legend(cell_type_legend[1, 1], swatches, labs, patchsize = (35, 35), rowgap = 10, nbanks = 3, framevisible = false)
 	cell_type_legend
@@ -983,7 +988,7 @@ TiffImages = "~0.10.0"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.2"
+julia_version = "1.10.5"
 manifest_format = "2.0"
 project_hash = "094ca28ff59a0c8fc5d7ce72e3818f20436a703c"
 
@@ -1171,7 +1176,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.0+0"
+version = "1.1.1+0"
 
 [[deps.ConstructionBase]]
 git-tree-sha1 = "76219f1ed5771adbb096743bff43fb5fdd4c1157"
@@ -2526,7 +2531,7 @@ version = "0.15.2+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.8.0+1"
+version = "5.11.0+0"
 
 [[deps.libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -2607,11 +2612,12 @@ version = "3.5.0+0"
 # ╟─4e6989c4-72b6-4b54-ae6e-0a035e6cc8e1
 # ╟─06f9feb8-6ef1-4c04-af42-c75344f6509e
 # ╟─c0170387-a1d1-4f17-a41c-ae3875c2034a
-# ╟─8272ba6b-b303-43ad-8b3f-a96e28e387e0
+# ╠═8272ba6b-b303-43ad-8b3f-a96e28e387e0
+# ╠═7fc73803-e6ac-40ca-9ac4-53f962fec79d
 # ╠═0aecf292-b442-4b9a-b690-06e061a6af50
 # ╟─ba317e1a-c67c-4f5a-b62a-56d9c0f0df86
 # ╟─ce169cd6-91ab-4efb-9915-88d09f36038c
-# ╠═ed85f170-0bc4-4029-9652-b20f27000894
+# ╟─ed85f170-0bc4-4029-9652-b20f27000894
 # ╟─02e89f20-f528-4abe-8596-f3aced0bdd48
 # ╟─d0e5885f-44ed-4223-8fcd-1694ad13b09e
 # ╟─4cb153af-c1a0-47f5-a3d1-dfaa72f1c8b5
