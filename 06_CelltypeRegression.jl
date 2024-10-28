@@ -10,13 +10,16 @@ begin
 	using LinearAlgebra
 	using CSV 
 	using DataFrames
-	using CairoMakie
+	import CairoMakie
 	using StatsBase
 	import JLD2
 	using PlutoUI
 	using ColorTypes
 	using ColorSchemes
 end
+
+# ╔═╡ 020fd39d-fbbb-4581-a755-971507194216
+using AxisArrays: AxisArrays,AxisArray
 
 # ╔═╡ dab1bc4c-5328-4914-a126-83334093d19a
 using XLSX
@@ -30,10 +33,10 @@ using Survival
 # ╔═╡ aaf1d199-1c1d-4c61-b2fc-9889eb54f097
 PlutoUI.TableOfContents()
 
-# ╔═╡ acadbf73-83b6-4362-bc81-b6e34b772734
-DATA_PATH = joinpath(dirname(@__DIR__),"data")
-
 # ╔═╡ a958ffa2-401f-4ada-b1bc-ba1778057158
+"""
+Assure that patients in different files are formatted so that their names match identically.
+"""
 function format_patient(x)
 	if length(split(x," ")) != 2
 		error("choked on $x")
@@ -64,13 +67,48 @@ begin
 	"""
 end
 
-# ╔═╡ f946d882-8669-4937-ba0f-31f02f593cfb
-format_patient("MCL2 98")
+# ╔═╡ b7da7101-78df-4318-9a83-d7c569533160
+cols
+
+# ╔═╡ baf91afb-0ede-44d8-b4dc-f6f4bd62fc58
+"""
+generate the normalized bar plots for the cell type distribution across the images.
+"""
+function prob_plot(image_count_dict, 
+		celltype_order, # list of celltypes
+		image_order; # list of images
+	image_names = img -> img, #get(image_patient_key,img,"(..."*img[end-17:end-5]*")"),
+	colorfun = cell -> cols[cell])
+
+		
+	# generate a matrix of cumulative probability
+	cumprob_mat = stack(
+		cumsum(LinearAlgebra.normalize([image_count_dict[img][typ] for typ in celltype_order],1)) 
+		for img in image_order) 
+	
+	fig2 = CairoMakie.Figure(size = (1400,600))
+	ax2 = CairoMakie.Axis(fig2[1,1]; 
+		aspect = 3, 
+		xticks = (axes(cumprob_mat,2), map(image_names,image_order)), 
+		xticklabelrotation = pi/2,
+		xlabel = "Patient",
+		ylabel = "Celltype fraction",
+		xticklabelsize = 12);
+	CairoMakie.xlims!(ax2, [.5,length(image_order)+.5])
+	CairoMakie.ylims!(ax2,0,1)
+
+	for jj in reverse(axes(cumprob_mat,1))
+		CairoMakie.barplot!(ax2,axes(cumprob_mat,2),cumprob_mat[jj,:], 
+			color = colorfun(celltype_order[jj]), gap = 0.0)
+	end
+	CairoMakie.vlines!(ax2,collect(axes(cumprob_mat,2)) .+ .5, color=RGB(1), linewidth = .5)
+	
+	fig2
+end
 
 # ╔═╡ b0281421-b21e-4934-b5be-c50c79c8fac9
 md"""
-	# load patient information
-	and format the patient names
+# Patient data and cytoMap regression
 """
 
 # ╔═╡ 15e412dc-8443-427e-92cc-013bd5acb617
@@ -86,7 +124,7 @@ end
 cytospace_filename = 
 	let dir = joinpath(dirname(@__DIR__),"data")
 	name = filter(readdir(dir)) do x
-	startswith(x, "CytoSPACE")
+	startswith(x, "CytoMAP")
 	end
 	joinpath(dir,name[1])
 end	
@@ -100,9 +138,55 @@ df_patientdata.Patient = format_patient.(replace.(df_patientdata.Patient, ":" =>
 end
 
 # ╔═╡ e702ae86-ffd2-43f6-b8a9-5bf0b9c49dac
-let img_pat = unique(df_clustered.Patient), dat_pat =  df_patientdata.Patient
-	( length(intersect(img_pat,dat_pat)) , length(img_pat) , setdiff(img_pat,dat_pat), length(dat_pat))
+let img_pat = unique(df_clustered.Patient), 
+	dat_pat =  df_patientdata.Patient
+	( 	length(intersect(img_pat,dat_pat)) , # number of overalapping images
+		length(img_pat) , # number of patient images
+		setdiff(img_pat,dat_pat), length(dat_pat)) 
+		# images that dont have patient data
 end
+
+# ╔═╡ 740fc22e-7008-4857-87c8-5da871256ff7
+let labs = sort(collect(keys(cols)))
+	swatches = [CairoMakie.PolyElement(color =cols[l], strokewidth = 0) for l in labs]
+	cell_type_legend = CairoMakie.Figure(size = (500,270))
+	CairoMakie.Legend(cell_type_legend[1, 1], swatches, labs, patchsize = (35, 35), rowgap = 10, nbanks = 3, framevisible = false)
+	CairoMakie.save(joinpath(@__DIR__,"plots","06_celltype_legend.pdf"), cell_type_legend)
+	cell_type_legend
+end
+
+# ╔═╡ 4c242bea-1ca3-4693-97c4-eaef88614436
+"""
+method takes an AxisArray and a coloring function
+"""
+function prob_plot(array_freq::AxisArray;
+	colorfun = cell -> cols[cell])
+ 	cumprob_mat = mapslices(cumsum, array_freq; dims = 2)
+	
+	fig2 = CairoMakie.Figure(size = (1400,600))
+	ax2 = CairoMakie.Axis(fig2[1,1]; 
+		aspect = 3, 
+		xticks = (axes(cumprob_mat,1), AxisArrays.axes(array_freq,1)[:]), 
+		xticklabelrotation = pi/2,
+		xlabel = "Patient",
+		ylabel = "Celltype fraction",
+		xticklabelsize = 12);
+	CairoMakie.xlims!(ax2, [.5,size(array_freq,1)+.5])
+	CairoMakie.ylims!(ax2,0,1)
+
+	for jj in reverse(axes(cumprob_mat,2))
+		CairoMakie.barplot!(ax2,
+			axes(cumprob_mat,1),
+			cumprob_mat[:,jj], 
+			color = colorfun( AxisArrays.axes(array_freq,2)[jj]), gap = 0.0)
+	end
+	CairoMakie.vlines!(ax2,collect(axes(cumprob_mat,1)) .+ .5, color=RGB(1), linewidth = .5)
+	
+	fig2
+end
+
+# ╔═╡ e3720314-31a8-4338-8d3d-2e07b2b0f559
+
 
 # ╔═╡ 1943407a-87e9-4946-87cf-578de36ea602
 function celltype_count_dict(cluster_vec, labels)
@@ -152,8 +236,46 @@ function dict_to_dataframe(patients::Dict)::DataFrame
     return df
 end
 
-# ╔═╡ 449a5dd9-01c2-48c3-9e69-d538de4dbbe9
+# ╔═╡ 41573578-2f30-4215-a979-06efd1abee07
 df_cells = dict_to_dataframe(image_count_dict)
+
+# ╔═╡ d8c3f829-0919-4e8e-9b4d-afaf7b567a98
+array_freq = let array_freq = AxisArray(exp.(Matrix(df_cells[:,2:end])), 
+	AxisArrays.Axis{:Patient}(df_cells[:,1]), 
+	AxisArrays.Axis{:cell_type}(names(df_cells)[2:end])
+)
+	imageorder = sortperm(array_freq[cell_type = "B/Tumor"] .+  array_freq[cell_type = "B/FDC"])
+	cellorder = sortperm( AxisArrays.axes(array_freq,2)[:])
+	
+	array_freq[imageorder,cellorder]
+end
+
+# ╔═╡ eaabe590-24ef-4cb6-b1e2-641a6f070326
+AxisArrays.axes(array_freq,1)
+
+# ╔═╡ 7aba5b23-a535-4aae-9921-a60982790e5d
+let fig = prob_plot(array_freq)
+	CairoMakie.save(joinpath(@__DIR__,"plots","06_celltype_bar.pdf"), fig)
+	fig
+end
+
+# ╔═╡ 7579c676-fd08-47a2-8881-3765b0865fe6
+let 
+	labels = repeat(reshape(AxisArrays.axes(array_freq,2)[:],1,:),size(array_freq,1),1)
+	fig = CairoMakie.Figure(size = (700,500))
+	ax = CairoMakie.Axis(fig[1,1];
+		xticks = (axes(array_freq,2), AxisArrays.axes(array_freq,2)[:]), 
+		xticklabelrotation = pi/4,
+		xlabel = "Cell type",
+		ylabel = "Cell-type fraction",
+		xticklabelsize = 12)
+	CairoMakie.rainclouds!(ax,collect(labels[:]), collect(array_freq[:]); 
+		color = [cols[l] for l in labels[:]], 
+	clouds = nothing, gap = -2)
+	CairoMakie.ylims!(ax,0,.7)
+	CairoMakie.save(joinpath(@__DIR__,"plots","06_celltype_cloud.pdf"), fig)
+	fig
+end
 
 # ╔═╡ eb75c9a3-6f5b-4588-8881-ec211aeb351d
 begin
@@ -162,92 +284,108 @@ begin
 	df_combined.event = EventTime.( df_combined.PFS_days, df_combined.PFS_event)
 end
 
-# ╔═╡ 0051e787-c3e4-46a2-a321-5702d4e5086d
-model1 = let formula1 = eval(Expr(:call, :(~), term(:OS_event),  Expr(:call, :+, term(1), term.(names(df_cells)[2:end]
-)...)))
-	 glm(formula1, df_combined, Binomial(), LogitLink())
-end
-
-# ╔═╡ 0ad8272a-9c89-4901-9c82-89bd98b3bad8
-model2 = let formula2 = eval(Expr(:call, :(~), term(:TTP_event),  Expr(:call, :+, term(1), term.(filter(names(df_cells)) do xx
-	#xx != "B/Tumor"
-	true
-end[2:end]
-)...))) 
-	glm(formula2, df_combined, Binomial(), LogitLink())
-end
-
-# ╔═╡ 27cad55c-31f3-4566-98b4-262020fda6ae
-coefnames(model2)[[1,8,7,2,12,6,3,4,5,9,10,11]]
-
-# ╔═╡ 57f6e471-f0bd-4b80-bf69-8a2798bda0b4
-ordering = [1,8,7,2,12,6,3,4,5,9,10,11]
-
-# ╔═╡ 25332bd7-9279-4ee5-a7e9-add2c432e660
-let perm = ordering,
-names = string.(coefnames(model2))[perm], coef = coef(model2)[perm], stderr = stderror(model2)[perm]
-	fig = Figure()
-	ax = Axis(fig[1, 1], title = "GLM Regression Coefficients",
-          ylabel = "Predictive for progression", xticklabelrotation = π/2, xticks = 		(1:length(names), names))
+# ╔═╡ 0e074fb4-c41e-4094-9aeb-63a26d66446d
+function forestplot(names,coef,stderr; ylims = (-2.8,9.5), axiskwds...)
+	fig = CairoMakie.Figure()
+	ax = CairoMakie.Axis(fig[1, 1]; axiskwds..., xticklabelrotation = π/4, xticks = 		(1:length(names), names))
 
 # Plot coefficients
 	#barplot!(ax, 1:length(names), coef, color = :blue, strokecolor = :black)
-	xlims!(ax,1.5,length(perm) +0.5)
-	ylims!(ax,-2.8,9.5)
-	hlines!(ax,[0]; color = :gray)
+	CairoMakie.xlims!(ax,0.5,length(names) +0.5)
+	CairoMakie.ylims!(ax,ylims)
+	CairoMakie.hlines!(ax,[0]; color = :gray)
 # Add error bars
-for i in 1:length(coef)
-	lines!(ax, [i, i], [coef[i] - 2stderr[i], coef[i] + 2stderr[i]], color = :red, linewidth = 1)
-	lines!(ax, [i, i], [coef[i] - stderr[i], coef[i] + stderr[i]], color = :pink, linewidth = 10)
-  #  scatter!(ax, [i, i], [coef[i] - stderr[i], coef[i] + stderr[i]], color = :red, marker = :hline)
-	scatter!(ax, [i, i], [coef[i] - 0stderr[i], coef[i] + 0stderr[i]], color = :black, marker = :hline)
-end
-save(joinpath(@__DIR__,"plots","06_glm_regression_coefficients.pdf"), fig)
-# Display the figure
-fig
-end
-
-# ╔═╡ c3dd9f8b-5c38-4868-b9b1-44e3563a73a4
-model3 = let formula2 = eval(Expr(:call, :(~), term(:event),  Expr(:call, :+, term.(names(df_cells)[2:end]
-)...))) 
-	coxph(formula2, df_combined)
+	for i in 1:length(coef)
+		color = cols[names[i]]
+		CairoMakie.lines!(ax, [i, i], [coef[i] - 2stderr[i], coef[i] + 2stderr[i]]; color, linewidth = 3)
+		CairoMakie.lines!(ax, [i, i], [coef[i] - stderr[i], coef[i] + stderr[i]]; color, linewidth = 12)
+	  #  scatter!(ax, [i, i], [coef[i] - stderr[i], coef[i] + stderr[i]], color = :red, marker = :hline)
+		CairoMakie.scatter!(ax, [i, i], [coef[i] - 0stderr[i], coef[i] + 0stderr[i]], color = :black, marker = :hline)
+	end
+	fig
 end
 
-# ╔═╡ 0ed892c1-87ec-499d-bb61-d56374d46926
-filter(!=("B/Tumor"),names(df_cells))
-
-# ╔═╡ dc178c56-7125-40be-ab9f-b0d36ae94019
-let perm = [1,8,7,2,12,6,3,4,5,9,10,11], names = string.(coefnames(model3))[perm], coef = coef(model3)[perm], stderr = stderror(model3)[perm]
-	fig = Figure()
-	ax = Axis(fig[1, 1], title = "Hazard Model Coefficients",
-          ylabel = "Predictive for progression", xticklabelrotation = π/2, xticks = 		(1:length(names), names))
-
-# Plot coefficients
-	hlines!(ax,[0]; color = :gray)
-# Add error bars
-for i in 1:length(coef)
-	lines!(ax, [i, i], [coef[i] - 2stderr[i], coef[i] + 2stderr[i]], color = :red, linewidth = 1)
-	lines!(ax, [i, i], [coef[i] - stderr[i], coef[i] + stderr[i]], color = :pink, linewidth = 10)
-  #  scatter!(ax, [i, i], [coef[i] - stderr[i], coef[i] + stderr[i]], color = :red, marker = :hline)
-	scatter!(ax, [i, i], [coef[i] - 0stderr[i], coef[i] + 0stderr[i]], color = :black, marker = :hline)
+# ╔═╡ 1f057c11-09b9-47bd-8ef0-762f9e7859e0
+function glm_expression(vars)
+	formula2 = eval(Expr(:call, :(~), term(:TTP_event),  Expr(:call, :+, term(1),
+		term.(vars)...))) 
+	glm(formula2, df_combined, Binomial(), LogitLink())
 end
-save(joinpath(@__DIR__,"plots","06_coxph_regression_coefficients.pdf"), fig)
-# Display the figure
-fig
+
+# ╔═╡ c7ea038b-eafa-4161-9284-e80bf3e0bb55
+function coxph_expression(vars)
+	formula = eval(Expr(:call, :(~), term(:event),  Expr(:call, :+, 
+		term.(vars)...))) 
+	coxph(formula, df_combined)
+end
+
+# ╔═╡ de162419-4e3c-4230-a79a-156a87964b96
+celltype_variables = sort(setdiff(names(df_cells),["Patient","Stromal","Endo"]))
+
+# ╔═╡ 94fefce5-046b-43df-b77f-9b5cb819aa81
+let 
+	coefs  = []
+	names  = []
+	stderrs = []
+	for ii in celltype_variables
+		models = glm_expression([ii])
+		push!(coefs, coef(models)[2])
+		push!(stderrs, stderror(models)[2])
+		push!(names, ii)
+	end
+	fig = forestplot(names,coefs,stderrs, ylims = (-2,2.5), title = "Univariate logistic models", ylabel = "Association with progression")
+	CairoMakie.save(joinpath(@__DIR__,"plots","06_glm_coefficients_univariate.pdf"), fig)
+	fig
+end
+
+# ╔═╡ 0ad8272a-9c89-4901-9c82-89bd98b3bad8
+let model = glm_expression(celltype_variables)
+	names = celltype_variables
+	coefs = coef(model)[2:end]
+	stderrs = stderror(model)[2:end]
+	fig = forestplot(names,coefs,stderrs, ylims = (-2.5,8.5), title = "Multivariate logistic model", ylabel = "Association with progression")
+	CairoMakie.save(joinpath(@__DIR__,"plots","06_glm_coefficients_multivariate.pdf"), fig)
+	fig
+end
+
+# ╔═╡ bb50bf06-ab4f-40b1-966d-f06eeb6ecbc8
+let 
+	coefs  = []
+	names  = []
+	stderrs = []
+	for ii in celltype_variables
+		models = coxph_expression([ii])
+		push!(coefs, coef(models)[1])
+		push!(stderrs, stderror(models)[1])
+		push!(names, ii)
+	end
+	fig = forestplot(names,coefs,stderrs, ylims = (-2,2.5), title = "Univariate Cox model", ylabel = "Association with progression")
+	CairoMakie.save(joinpath(@__DIR__,"plots","06_coxph_coefficients_univariate.pdf"), fig)
+	fig
+end
+
+# ╔═╡ f6b8d03a-4b65-4bc2-b328-a8391172027d
+let model = coxph_expression(celltype_variables)
+	names = celltype_variables
+	coefs = coef(model)[1:end]
+	stderrs = stderror(model)[1:end]
+	fig = forestplot(names,coefs,stderrs, ylims = (-2.5,5.5), title = "Multivariate Cox model", ylabel = "Association with progression")
+	CairoMakie.save(joinpath(@__DIR__,"plots","06_coxph_coefficients_multivariate.pdf"), fig)
+	fig
 end
 
 # ╔═╡ 952483f6-3ccb-4d39-b85a-c769dac8bcd7
 km = fit(KaplanMeier,df_combined.TTP_days, df_combined.TTP_event)
 
 # ╔═╡ cb0e06ba-6a2b-40c3-b969-7102be202744
-let f = Figure()
-	ax= Axis(f[1, 1], xlabel = "Days", ylabel = "Fraction progression-free",)
-	ylims!(ax,(0,1))
-	xlims!(ax,(0,3000))
-	stairs!(ax, vcat(0,km.events.time), vcat(1,km.survival))
-	stairs!(ax, vcat(0,km.events.time), vcat(1,km.survival) .+ vcat(0,km.stderr) , color = :pink)
-	stairs!(ax, vcat(0,km.events.time), vcat(1,km.survival) .- vcat(0,km.stderr) , color = :pink)
-	save(joinpath(@__DIR__,"plots","06_kaplan_meier.pdf"), f)
+let f = CairoMakie.Figure()
+	ax= CairoMakie.Axis(f[1, 1], xlabel = "Days", ylabel = "Fraction progression-free",)
+	CairoMakie.ylims!(ax,(0,1))
+	CairoMakie.xlims!(ax,(0,3000))
+	CairoMakie.stairs!(ax, vcat(0,km.events.time), vcat(1,km.survival))
+	CairoMakie.stairs!(ax, vcat(0,km.events.time), vcat(1,km.survival) .+ vcat(0,km.stderr) , color = :pink)
+	CairoMakie.stairs!(ax, vcat(0,km.events.time), vcat(1,km.survival) .- vcat(0,km.stderr) , color = :pink)
+	CairoMakie.save(joinpath(@__DIR__,"plots","06_kaplan_meier.pdf"), f)
 	f
 end
 
@@ -367,46 +505,46 @@ function plot_clustering(label_df, image_names; probs = nothing)
 	marker_order = cluster_matrix_rows(permutedims(Matrix(label_df),(2,1))).order
 	markers = names(label_df)[marker_order]
 	
-	f = Figure(size = (1300,550))
-	ax = Axis(f[2,1]; yticks = (eachindex(markers), markers), 
+	f = CairoMakie.Figure(size = (1300,550))
+	ax = CairoMakie.Axis(f[2,1]; yticks = (eachindex(markers), markers), 
 	xticks = (eachindex(image_names), image_names[cluster_order]),
 	xticklabelrotation = pi/2,
 	xlabel = "Sub-cluster", aspect = 6)
-	hidespines!(ax)
-	heatmap!(ax, clamp.(permutedims(Matrix(label_df),(2,1))[marker_order,cluster_order],-1.5,1.5)', colormap = :vik)
-	ct_ax = Axis(f[1,1])
-	xlims!(ct_ax, 0.5,length(cluster_order) + 0.5)
-	hidedecorations!(ct_ax)
-	hidespines!(ct_ax)
+	CairoMakie.hidespines!(ax)
+	CairoMakie.heatmap!(ax, clamp.(permutedims(Matrix(label_df),(2,1))[marker_order,cluster_order],-1.5,1.5)', colormap = :vik)
+	ct_ax = CairoMakie.Axis(f[1,1])
+	CairoMakie.xlims!(ct_ax, 0.5,length(cluster_order) + 0.5)
+	CairoMakie.hidedecorations!(ct_ax)
+	CairoMakie.hidespines!(ct_ax)
 	if isnothing(probs)
 	clusternodes = create_cluster_nodes(cluster_matrix_rows(Matrix(label_df)))
 	for ii in clusternodes
 		if ii.parent != 0
 			parent = clusternodes[ii.parent]
-			lines!(ct_ax,
-				[Point2f(ii.center,ii.merge),
-					Point2f(ii.center,parent.merge),
-						Point2f(parent.center,parent.merge)], color = HSV(parent.merge*360/200,1,0.8))
+			CairoMakie.lines!(ct_ax,
+				[CairoMakie.Point2f(ii.center,ii.merge),
+					CairoMakie.Point2f(ii.center,parent.merge),
+						CairoMakie.Point2f(parent.center,parent.merge)], color = HSV(parent.merge*360/200,1,0.8))
 		end
 	end
 	else # if given plot the membership probability for each 
-		barplot!(ct_ax, probs[cluster_order]; gap = 0)
+		CairoMakie.barplot!(ct_ax, probs[cluster_order]; gap = 0)
 	end
-	rowsize!(f.layout, 1, Relative(0.27))
-	rowgap!(f.layout, -100)
-	save(joinpath(@__DIR__,"plots","clustering_on_neighborhoods.pdf"),f)
+	CairoMakie.rowsize!(f.layout, 1, CairoMakie.Relative(0.27))
+	CairoMakie.rowgap!(f.layout, -100)
 	f
 end
 
 # ╔═╡ 0a2e1cae-ffd7-4080-a809-34a9bd0ef627
 let plt = plot_clustering(df_cytospace[:,Not(end)], df_cytospace.Patient)
-	save(joinpath(@__DIR__,"plots","06_cytospace_clustering.pdf"),plt)
+	CairoMakie.save(joinpath(@__DIR__,"plots","06_cytospace_clustering.pdf"),plt)
 	plt
 end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
+AxisArrays = "39de3d68-74b9-583c-8d2d-e117c070f3a9"
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Clustering = "aaaa29a8-35af-508c-8bc3-b662a17a0fe5"
@@ -424,6 +562,7 @@ Survival = "8a913413-2070-5976-9d4c-2b364fdc2f7f"
 XLSX = "fdbf4ff8-1666-58a4-91e7-1b58723a45e0"
 
 [compat]
+AxisArrays = "~0.4.7"
 CSV = "~0.10.14"
 CairoMakie = "~0.12.13"
 Clustering = "~0.15.7"
@@ -444,9 +583,9 @@ XLSX = "~0.10.4"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.10.2"
+julia_version = "1.10.5"
 manifest_format = "2.0"
-project_hash = "a99b9a9563262d285eec024ba9a97b728de1d5c2"
+project_hash = "13c971ce002ad6bb5b486a6016f3555a43cceb99"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -685,7 +824,7 @@ weakdeps = ["Dates", "LinearAlgebra"]
 [[deps.CompilerSupportLibraries_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "e66e0078-7015-5450-92f7-15fbd957f2ae"
-version = "1.1.0+0"
+version = "1.1.1+0"
 
 [[deps.ConstructionBase]]
 git-tree-sha1 = "76219f1ed5771adbb096743bff43fb5fdd4c1157"
@@ -2127,7 +2266,7 @@ version = "0.15.2+0"
 [[deps.libblastrampoline_jll]]
 deps = ["Artifacts", "Libdl"]
 uuid = "8e850b90-86db-534c-a0d3-1478176c7d93"
-version = "5.8.0+1"
+version = "5.11.0+0"
 
 [[deps.libfdk_aac_jll]]
 deps = ["Artifacts", "JLLWrappers", "Libdl"]
@@ -2185,10 +2324,11 @@ version = "3.6.0+0"
 # ╔═╡ Cell order:
 # ╠═83b6df49-380f-423c-ae96-7e5c5625038f
 # ╠═aaf1d199-1c1d-4c61-b2fc-9889eb54f097
-# ╠═acadbf73-83b6-4362-bc81-b6e34b772734
 # ╠═fd623e78-444f-11ef-11d8-19fb06d8870e
 # ╠═a958ffa2-401f-4ada-b1bc-ba1778057158
-# ╠═f946d882-8669-4937-ba0f-31f02f593cfb
+# ╠═020fd39d-fbbb-4581-a755-971507194216
+# ╠═b7da7101-78df-4318-9a83-d7c569533160
+# ╠═baf91afb-0ede-44d8-b4dc-f6f4bd62fc58
 # ╠═b0281421-b21e-4934-b5be-c50c79c8fac9
 # ╠═15e412dc-8443-427e-92cc-013bd5acb617
 # ╠═90251be3-2940-428a-a217-7f189ca49133
@@ -2196,20 +2336,27 @@ version = "3.6.0+0"
 # ╠═dab1bc4c-5328-4914-a126-83334093d19a
 # ╠═e702ae86-ffd2-43f6-b8a9-5bf0b9c49dac
 # ╠═5714b01b-bde4-45bc-a5f7-131bac2774e6
+# ╠═41573578-2f30-4215-a979-06efd1abee07
+# ╠═d8c3f829-0919-4e8e-9b4d-afaf7b567a98
+# ╠═eaabe590-24ef-4cb6-b1e2-641a6f070326
+# ╠═7aba5b23-a535-4aae-9921-a60982790e5d
+# ╠═7579c676-fd08-47a2-8881-3765b0865fe6
+# ╠═740fc22e-7008-4857-87c8-5da871256ff7
+# ╠═4c242bea-1ca3-4693-97c4-eaef88614436
+# ╠═e3720314-31a8-4338-8d3d-2e07b2b0f559
 # ╠═1943407a-87e9-4946-87cf-578de36ea602
-# ╠═449a5dd9-01c2-48c3-9e69-d538de4dbbe9
 # ╠═056351ad-f861-4c1f-a1c1-7a7421875765
 # ╠═eb75c9a3-6f5b-4588-8881-ec211aeb351d
 # ╠═8af4977a-ad53-4aea-a7d1-49a630d6af7d
-# ╠═0051e787-c3e4-46a2-a321-5702d4e5086d
-# ╠═0ad8272a-9c89-4901-9c82-89bd98b3bad8
-# ╠═27cad55c-31f3-4566-98b4-262020fda6ae
-# ╠═57f6e471-f0bd-4b80-bf69-8a2798bda0b4
-# ╠═25332bd7-9279-4ee5-a7e9-add2c432e660
 # ╠═73993601-8df0-473f-bea5-9748eb13e1e8
-# ╠═c3dd9f8b-5c38-4868-b9b1-44e3563a73a4
-# ╠═0ed892c1-87ec-499d-bb61-d56374d46926
-# ╠═dc178c56-7125-40be-ab9f-b0d36ae94019
+# ╠═0e074fb4-c41e-4094-9aeb-63a26d66446d
+# ╠═1f057c11-09b9-47bd-8ef0-762f9e7859e0
+# ╠═c7ea038b-eafa-4161-9284-e80bf3e0bb55
+# ╠═de162419-4e3c-4230-a79a-156a87964b96
+# ╠═94fefce5-046b-43df-b77f-9b5cb819aa81
+# ╠═0ad8272a-9c89-4901-9c82-89bd98b3bad8
+# ╠═bb50bf06-ab4f-40b1-966d-f06eeb6ecbc8
+# ╠═f6b8d03a-4b65-4bc2-b328-a8391172027d
 # ╠═952483f6-3ccb-4d39-b85a-c769dac8bcd7
 # ╠═cb0e06ba-6a2b-40c3-b969-7102be202744
 # ╠═015e1959-aeba-4793-8a92-e88619d6b663

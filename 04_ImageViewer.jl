@@ -272,7 +272,7 @@ begin
 	push!(labs,"Unknown")
 	push!(cols,"Unknown" => unknown_color)
 	swatches = [CairoMakie.PolyElement(color = get(cols,l,highlight), strokewidth = 0) for l in labs]
-	cell_type_legend = CairoMakie.Figure(size = (500,250))
+	cell_type_legend = CairoMakie.Figure(size = (500,270))
 	CairoMakie.Legend(cell_type_legend[1, 1], swatches, labs, patchsize = (35, 35), rowgap = 10, nbanks = 3, framevisible = false)
 	cell_type_legend
 end
@@ -492,42 +492,6 @@ end
  countplot_plot( highlighted_counts, total_counts, # list of celltypes
 		collect(keys(highlighted_counts))[sortperm([
 			-highlighted_counts[x] for x in collect(keys(highlighted_counts))])];highlight)
-
-# ╔═╡ 12e96ec3-00cf-4f83-92b7-0ae10256d711
-"""
-generate the normalized bar plots for the cell type distribution across the images.
-"""
-function prob_plot(image_count_dict, 
-		celltype_order, # list of celltypes
-		image_order; # list of images
-	image_names = img -> img, #get(image_patient_key,img,"(..."*img[end-17:end-5]*")"),
-	colorfun = cell -> cols[cell])
-
-		
-	# generate a matrix of cumulative probability
-	cumprob_mat = stack(
-		cumsum(LinearAlgebra.normalize([image_count_dict[img][typ] for typ in celltype_order],1)) 
-		for img in image_order) 
-	
-	fig2 = CairoMakie.Figure(size = (1400,600))
-	ax2 = CairoMakie.Axis(fig2[1,1]; 
-		aspect = 3, 
-		xticks = (axes(cumprob_mat,2), map(image_names,image_order)), 
-		xticklabelrotation = pi/2,
-		xlabel = "Patient",
-		ylabel = "Celltype fraction",
-		xticklabelsize = 12);
-	CairoMakie.xlims!(ax2, [.5,length(image_order)+.5])
-	CairoMakie.ylims!(ax2,0,1)
-
-	for jj in reverse(axes(cumprob_mat,1))
-		CairoMakie.barplot!(ax2,axes(cumprob_mat,2),cumprob_mat[jj,:], 
-			color = colorfun(celltype_order[jj]), gap = 0.0)
-	end
-	CairoMakie.vlines!(ax2,collect(axes(cumprob_mat,2)) .+ .5, color=RGB(1), linewidth = .5)
-	
-	fig2
-end
 
 # ╔═╡ 086e88f3-6505-4ef9-9b1e-1285290fa515
 """
@@ -2596,7 +2560,7 @@ version = "3.5.0+0"
 # ╠═7bce7789-58d5-49e7-b0cc-f38f2829f0db
 # ╠═73279267-ba04-47da-9bba-81a1bc26269c
 # ╟─34f5a972-1aba-4dc3-8fa2-4de502f5f26e
-# ╠═43d75174-d346-40cf-ab10-40c50adf5b4f
+# ╟─43d75174-d346-40cf-ab10-40c50adf5b4f
 # ╟─6fba6f0b-cce8-4a2a-a970-d6a5c9c2c2f9
 # ╟─f7858065-6c79-4636-af1d-5664d73cab85
 # ╟─9e355daf-ada9-4519-b186-2512a63a6747
@@ -2654,7 +2618,6 @@ version = "3.5.0+0"
 # ╠═bd0f192c-f2e3-4d55-9e15-2d1ce6f37030
 # ╠═9ad2fe2b-45bc-46bc-869f-51b1c051d705
 # ╠═d2478db9-37a4-40cd-ab1d-7bef00352740
-# ╠═12e96ec3-00cf-4f83-92b7-0ae10256d711
 # ╠═086e88f3-6505-4ef9-9b1e-1285290fa515
 # ╠═3a045540-2f87-49ec-9e46-5d446f61cc1d
 # ╠═cdf7bade-38dc-45da-b685-628009c8e945

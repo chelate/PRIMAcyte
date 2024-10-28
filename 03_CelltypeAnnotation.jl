@@ -56,7 +56,7 @@ end
 # ╔═╡ dfbf5da0-674f-4b1d-bb55-978cfe1c35f3
 let 
 	JLD2.@load joinpath(@__DIR__,"data","targets.jld2") targets
-	global clusteron = setdiff(targets, ["DNA1"]) # don't cluster on these
+	global clusteron = setdiff(targets, ["HistH3"]) # don't cluster on these
 end
 
 # ╔═╡ ccbc0bd6-3cf0-48d5-a35e-885606e7f2e8
@@ -84,18 +84,15 @@ We perform kmeans clustering which was found to have better properties than flow
 We run 10 rounds with maxiter at 300. It seems that the performance of all the clusters are roughly the same.
 """
 
-# ╔═╡ 72eb6dac-533f-43f0-97f0-def102d7d442
-readdir(joinpath(@__DIR__,"data"))
-
 # ╔═╡ 60d92fda-cb7c-4608-a33f-3fb513c9ee24
 # long running calculation boilerplate
 if "kmeans_result.jld2" in readdir(joinpath(@__DIR__,"data")) # check if result is saved
 	JLD2.@load joinpath(@__DIR__,"data", "kmeans_result.jld2") kmeans_result # load it if it exists
 else # otherwise run 10 kmeans and choose the best one.
 	# Parallel implementation
-	Random.seed!(123)
-	kmeans_result = let results = ThreadPools.qmap(1:10) do _
-		kmeans(X, 200; maxiter=300, init=:kmpp)
+	Random.seed!(12345)
+	kmeans_result = let results = ThreadPools.qmap(1:20) do _
+		kmeans(X, 200; maxiter=400, init=:kmpp)
 		end
 	argmin(x->x.totalcost, results)
 	end
@@ -142,50 +139,50 @@ begin
 	collect(enumerate(cs))
 end
 
-# ╔═╡ 9f351f31-72a5-420e-acdf-e17da011fcdd
+# ╔═╡ 37705f42-9270-4311-9637-042a1d234fea
 color_dictionary = Dict(
-	"Treg" => cs[7],
-	"T(CD4+)" => cs[1],
+	"T CD4+FOXP3+" => cs[10],
+	"T CD4+PD1+" => cs[1],
+	"T CD4+PD1-" => cs[8],
 	"Endo" => cs[5],
 	"Stromal" => 1.2*cs[20],
-	"Neut" => cs[6],
-	"M1" => cs[12],
-	"M2" => cs[9],
+	"Neut" => cs[13],
+	"Macro M1" => cs[12],
+	"Macro M2" => cs[9],
 	"B/Tumor" => cs[16],
-	"Mono" => cs[11],
-	"T(CD8+)"  => cs[3],
-	#"T(CD8+PD1+)"  => cs[4],
+	"Monocytes" => cs[11],
+	"T CD8+PD1-"  => cs[3],
+	"T CD8+PD1+"  => cs[4],
 	"Dendritic"  => cs[2],
 	"B/FDC"  => cs[17]
 )
 
-# ╔═╡ b0a5bfb7-4fdf-4722-b71e-e26b24e2042e
+# ╔═╡ d4d1adf6-edb4-4ca1-80dd-6f43793d05fb
 md"""
 ## Tree definition
-Here we define the tree topology
 """
 
-# ╔═╡ ef9b9ae2-8d52-4d16-af54-9c76b46dc4f1
+# ╔═╡ 5702e224-41ad-4cdc-966c-7b093445d25d
 md"""
 # Myeloid + stromal lineages
 """
 
-# ╔═╡ 9bb15c18-ca76-4bd6-871d-a14de6b81e9e
+# ╔═╡ dba74e01-bf22-4ab4-9755-a577b86b253c
 md"""
 Problematic set of cells uncertain classification
 """
 
-# ╔═╡ 96ddb38d-262b-4d20-8a18-7731de14939b
+# ╔═╡ 7ccffdd7-6265-4b8d-9591-f112f4086739
 md"""
 ### Take a look for monocytes, CD14,CD16, CD163, look up the biology.
 """
 
-# ╔═╡ e1144401-e3a9-457c-bc90-477eba83bfc1
+# ╔═╡ e86e1318-9865-4dff-bfa3-ac1d7b41ee0f
 md"""
 # B Cell Lineage
 """
 
-# ╔═╡ 022b6c87-15cc-41cc-92cd-da74c5a95170
+# ╔═╡ 57b996f9-5fcf-456e-a49f-f9d7941de3f2
 md"""
 ### Note: branch off the sox11- cells instead and then branch off the other phenotype. 
  - KI67 is good prognostic indicator
@@ -195,12 +192,12 @@ md"""
  - look on sox11 on the images confined and noisy? compare with previous data.
 """
 
-# ╔═╡ cbd58cc9-fdb5-4b42-9222-eedd01e7db42
+# ╔═╡ ccd68c48-ff14-41fd-ab73-09bd0e109d37
 md"""
 # T Cell lineages
 """
 
-# ╔═╡ a6a50c9b-d509-4ca3-b1bd-5e8361130f74
+# ╔═╡ 1ffc1994-2e05-4e1d-94ea-01dceb8be6bc
 md"""
 Notes:
  - 157 is definitely myeloid, seems to be actually high in grzb and 163
@@ -208,12 +205,7 @@ Notes:
  - 159 are also positive here.
 """
 
-# ╔═╡ 8e473995-0fb3-4a75-be53-6a2976e4e5c4
-md"""
-Appears to be a  lost bright compartment that looks a bit trashy (non-bioloigcal)
-"""
-
-# ╔═╡ f4ac3998-9cda-455e-a76c-b5a09dd9b450
+# ╔═╡ 232c5db4-664a-4620-adef-a58882ed7226
 md"""
 - check 153
 	- seems like it really is clear in cd3.
@@ -376,16 +368,17 @@ function treeplot(cluster_tree)
 			sum(fractions[cluster_tree[k].included])))
 		end
 	end
-	f, ax, p = graphplot(g; layout = Buchheim(),
+	f, ax, p = graphplot(g; layout = Buchheim(;nodesize = 1.3*ones(length(edges(g)))),
 	ilabels_fontsize = 4,
+	ilabels_attr=(;rotation = 0*pi/4, word_wrap_width = 5),
 	elabels_fontsize = 5,
 	node_strokewidth=0,
 		elabels_shift = .75,
 		elabels = [elabels[e] for e in edges(g)],
                      ilabels=labs, node_color = cols,
                      arrow_shift=:end)
-	xlims!(-6,6)
-	ylims!(ax, (-20, 1))
+	xlims!(-9,9)
+	ylims!(ax, (-22, 1))
 
 	hidedecorations!(ax); hidespines!(ax); 
 	ax.aspect = DataAspect()
@@ -407,110 +400,139 @@ function boundinglines(number, defaults)
 	end
 end
 
-# ╔═╡ 7fbe6a16-6050-4e2d-9c8f-7e18ce960a69
+# ╔═╡ 75858fc1-845d-4a6e-89aa-9aa90afaa998
 begin
 	children_1 	= ("OK1","Dark")
 	scale_1 	= 
-		Dict("CD45" =>1 ,"HistH3"=>5, "CD34" => 3, "CD14" => 2, "TIM3" => 2, "Collagen"=>4)
-	@bind lines_1 boundinglines(1, [2,198])
+		Dict("CD45RO" =>1 ,"CD68"=>1, "CD163" => 3, "CD14" => 2, "TIM3" => 2)
+	@bind lines_1 boundinglines(1, [1,199])
 end
 
-# ╔═╡ eba21afe-8fc6-49b7-a419-c06efd3f7a44
+# ╔═╡ 9c7e7636-1ce3-4e45-ba91-76a38f3159b1
 begin
 	children_2 	= ("CD3+","CD3-")
 	scale_2	= 
-		Dict("CD3"=>5.5, "CD20"=> 2.5, "CD19"=> 2, "CD7"=>5, "CD45"=> 3, "CD68"=>4,"CD4"=> 5, "CD8a"=> 4.5)
-	@bind lines_2 boundinglines(2, [144,198])
+		Dict("CD3"=>5.5, "CD20"=> 3.5, "CD11c"=> 2, "CD45RA"=> 2, "CD45RO" =>2 ,"CD68"=>5.5,"CD4"=> 5, "CD8a"=> 5)
+	@bind lines_2 boundinglines(2, [131,191])
 end
 
-# ╔═╡ e3567477-f45a-41ff-9254-88862b58ffc0
+# ╔═╡ 5e1de902-1ad0-4a35-a15e-5155d4218a4b
 begin
 	children_5 	= ("CD68+","CD68-")
 	scale_5	= 
-		Dict("CD3"=>0, "CD20"=> 2, "CD19"=> 2, "CD66b"=> 2, "GrzB" =>2 ,"CD68"=>5,"CD11c"=>3, "CD11b"=>4,"Collagen"=>2, "CD163"=>2, "CD16"=>2,"CD21"=>1, "FOXP3"=>2)
-	@bind lines_5 boundinglines(5,[1,22])
+		Dict("CD3"=>0, "CD20"=> 3, "CD19"=> 2, "CD66b"=> 2, "GrzB" =>2 ,"CD68"=>4.7,"CD11c"=>3, "CD11b"=>4,"Collagen"=>2, "CD163"=>2, "CD16"=>2,"CD21"=>1, "FOXP3"=>2,"CD4"=> 0, "CD163"=> 3.2, "SOX11" => 1,"CD34"=>1, "Ki67"=>1, "CyclinD1"=>1, "TIM3"=>-1, "TIGIT" => -1,"PD1" => -1,"VISTA" => -2)
+	@bind lines_5 boundinglines(5,[108,138])
 end
 
-# ╔═╡ 911e29ef-bb39-46da-8d5f-7cfa06dca648
+# ╔═╡ 04b8441a-e65a-4354-8b99-4dbbcf5f0a11
 begin
-	children_10 	= ("M2","M1")
+	children_10 	= ("Macro M2","Macro M1")
 	scale_10	= 
 		Dict("CD11c"=> 4, "CD14" => 3, "CD11b" => 2, "CD163" => 4,"CD68"=> 1)
-	@bind lines_10 boundinglines(10, [20,23])
+	@bind lines_10 boundinglines(10, [1,8])
 end
 
-# ╔═╡ bf37292c-572a-4f8e-a5a3-033729f97034
+# ╔═╡ 08b3b370-1e24-47a4-becb-ac021f9e2d35
 begin
 	children_11 	= ("Neut","CD66b-")
 	scale_11	= 
-		Dict("CD20"=>4, "CD66b"=>4)
-	@bind lines_11 boundinglines(11, [1,1])
+		Dict("CD20"=>4, "CD66b"=>3)
+	@bind lines_11 boundinglines(11, [92,92])
 end
 
-# ╔═╡ f5b39dce-78f5-494b-a987-500d844c48df
+# ╔═╡ ae77f37d-9988-42ba-9ed3-962309f1b6d3
 begin
-	children_23 	= ("Other","Endo")
+	children_23 	= ("Other","Endo+")
 	scale_23	= 
-		Dict("CD20"=>4, "CD34"=>4, "PDL1"=>0, "CD16"=>4,"CD14"=>3)
-	@bind lines_23 boundinglines(23, [8,120])
+		Dict("CD20"=>4, "CD34"=>5, "PDL1"=>0, "CD163"=>0)
+	@bind lines_23 boundinglines(23, [1,102])
 end
 
-# ╔═╡ 330a7d1e-38e4-4751-aaec-60f7d715f47b
+# ╔═╡ f3dcfa67-199f-40b9-bee5-9139cbea1658
+begin
+	children_47 	= ("B/Tumor","Endo")
+	scale_47 = Dict("CD20"=>4, "CD34"=>5, "PDL1"=>2, "CD163"=>2)
+	@bind lines_47 boundinglines(47, [4,5])
+end
+
+# ╔═╡ 2668a4ba-cf88-4f11-bac5-4b86751c6b3a
 begin
 	children_46 	= ("Other","Stromal")
 	scale_46	= 
 		Dict("Collagen"=>4, "CD20" => 3)
-	@bind lines_46 boundinglines(46, [1,100])
+	@bind lines_46 boundinglines(46, [1,93])
 end
 
-# ╔═╡ 26c6a861-caef-4705-9f56-49bcc045e820
+# ╔═╡ addd35ab-b645-4b30-9333-1a91fbf0374a
 begin
 	children_92 	= ("Dendritic","AllB")
 	scale_92	= 
-		Dict("CD20" => 2, "CD11c"=>4, "CD11b"=>3)
-	@bind lines_92 boundinglines(92, [90,112])
+		Dict("CD20" => 2, "CD11c"=>4, "CD11b"=>2)
+	@bind lines_92 boundinglines(92, [83,96])
 end
 
-# ╔═╡ 31d2fdcd-7272-4c40-8c62-cb7596b58f94
+# ╔═╡ d61d7ad3-664c-47d6-82b2-29dfe50dbca2
 begin
-	children_185 	= ("B/FDC","B/Tumor+")
+	children_185 	= ("B/FDC+","B/Tumor+")
 	scale_185	= 
 		Dict("CD20" => 2, "CD21"=>3, "CyclinD1"=>1)
-	@bind lines_185 boundinglines(185, [83,97])
+	@bind lines_185 boundinglines(185, [70,85])
 end
 
-# ╔═╡ 986b6b97-c0a4-41ef-acdb-6583e71b041c
+# ╔═╡ d46b0dde-75ce-4348-ba06-5ea45f0a8421
 begin
-	children_371 	= ("Mono","B/Tumor")
+	children_370 	= ("Bright","B/FDC")
+	scale_370	= 
+		Dict("CD20" => 2, "CD45"=>3, "CyclinD1"=>1)
+	@bind lines_370 boundinglines(370, [1,1])
+end
+
+# ╔═╡ e9f48f02-a113-4899-8822-3d429bb4a0ef
+begin
+	children_371 	= ("Monocytes","B/Tumor")
 	scale_371	= 
-		Dict("CD16" => 2,"CD14" => 4)
-	@bind lines_371 boundinglines(371, [80,83])
+		Dict("CD16" => 2, "CD14"=>2, "CD20"=>2)
+	@bind lines_371 boundinglines(371, [69,73])
 end
 
-# ╔═╡ 7f6a63c5-560b-4921-94da-f81f58240224
+# ╔═╡ 2de50595-7fd6-442a-9084-d7807cefe9f7
 begin
-	children_4 	= ("T(CD8+)","CD4+") # TCell subcluster 
+	children_4 	= ("CD8+","T(CD4+)") # TCell subcluster 
 	scale_4	= 
-		Dict("CD8a" => 3, "CD4" => 3,"HistH3"=>1)
-	@bind lines_4 boundinglines(4, [1,22])
+		Dict("CD8a" => 5, "CD4" => 4,"FOXP3"=>3)
+	@bind lines_4 boundinglines(4, [1,29])
 end
 
-# ╔═╡ d7a8145a-96e5-4617-becb-dbb470d96164
+# ╔═╡ 7bdfe395-709c-4655-9286-b556f34cbcd3
 begin
-	children_9 	= ("T(CD4+)","CD4+FOXP3+")
+	children_9 	= ("T CD4+FOXP3+","CD4+")
 	scale_9	= 
-		 Dict("PD1" => 2, "FOXP3" =>3, "CD21"=>1,"HistH3"=>0,"CD68"=>2, )
-	@bind lines_9 boundinglines(9, [8,33])
+		 Dict("FOXP3" => 4, "TIGIT" =>2, "PD1"=>2)
+	@bind lines_9 boundinglines(9, [1,6])
 end
 
-# ╔═╡ fe1ed2f1-88ae-4c0f-b751-bf2628b3d328
+# ╔═╡ 3be9afef-461f-44bc-b077-331966f8f6bf
 begin
-	children_19 	= ("Treg","B/Tumor")
-	scale_19	= Dict("FOXP3" => 4,"GrzB"=>5 ,"PDL1" =>5)
-	@bind lines_19 boundinglines(19, [1,5])
+	children_19 	= ("T CD4+PD1-","T CD4+PD1+")
+	scale_19	= Dict("PD1" => 4, "TIGIT" =>2)
+	@bind lines_19 boundinglines(19, [1,12])
 end
 
-# ╔═╡ 1c906127-b043-49e0-ac16-bdef4764f119
+# ╔═╡ dfc1c49e-cc79-4adc-bbe1-5e6e9c96a8f9
+begin
+	children_8 	= ("CD8+","Bright")
+	scale_8	= Dict("CD8a" => 2,"CD45RO"=>1)
+	@bind lines_8 boundinglines(8, [2,26])
+end
+
+# ╔═╡ abc61fdb-dbe2-465a-a5d1-9b2ad1dd5991
+begin
+	children_16 	= ("T CD8+PD1+","T CD8+PD1-")
+	scale_16	= Dict("PD1"=> 4, "TIGIT"=>3,"CD45RO" => 3)
+	@bind lines_16 boundinglines(16, [1,18])
+end
+
+# ╔═╡ f933e5c2-53bf-477d-ae86-2721fea1432c
 begin # here will be the history of our 
 	cluster_tree = Dict(1 => CellType("root",Dict{String,Float64}(),collect(axes(label_df,1)), 0,0,RGB(1,1,1)))
 	
@@ -541,6 +563,9 @@ begin # here will be the history of our
 	define_node(cluster_tree, 46, scale_46, lines_46,  
 		children = children_46) # (_,Stromal)
 
+	define_node(cluster_tree, 47, scale_47, lines_47,  
+		children = children_47) # (Endo, Bright)
+
 
 	define_node(cluster_tree, 92, scale_92, lines_92,  
 		children = children_92) # (Dendritic,_)
@@ -550,90 +575,109 @@ begin # here will be the history of our
 
 	define_node(cluster_tree, 19, scale_19, lines_19,  
 		children = children_19) # (Treg,_)
+	
+	define_node(cluster_tree, 8, scale_8, lines_8,  
+		children = children_8) # T(CD8+)
+
+	define_node(cluster_tree, 16, scale_16, lines_16,  
+		children = children_16) # ( T(CD8+PD1+) , T(CD8+) )
+		
+	define_node(cluster_tree, 370, scale_370, lines_370,  
+		children = children_370) # ( Bright, B / FDC )
 
 	define_node(cluster_tree, 371, scale_371, lines_371,  
 		children = children_371) # ( Monocytes, B / Tumor)
-end;
+end
 
-# ╔═╡ 591b2c61-3ae3-4c70-9af5-6ef76fdfe611
+# ╔═╡ 6713b5ae-e6c0-4f24-8064-57d59ef2fbc2
 let tp = treeplot(cluster_tree)
 	save(joinpath(@__DIR__,"plots","03_annotation_tree.pdf"), tp)
 	tp
 end
 
-# ╔═╡ da7dcf1c-0433-456e-9a6f-58c0f7e97db3
+# ╔═╡ d10e5e98-cdd3-4f1f-8dce-0c1b66e2bf30
 node_view(cluster_tree,1)
 
-# ╔═╡ 8749b389-7915-4b69-b9ba-b1688c2600c6
+# ╔═╡ 3055799d-1c33-4f56-9072-b065fa46dac9
 node_view(cluster_tree,2)
 
-# ╔═╡ 91e577f0-8b2c-4c44-9486-b04713366e30
+# ╔═╡ 633c1e4e-a98d-415d-82a9-5c80e85a4b81
 dotplot(cluster_tree,2, x = "CD4", y = "CD8a")
 
-# ╔═╡ 54cc0655-88cc-4ea6-b20d-898cc2f1a4f9
+# ╔═╡ 863cd9f6-e19a-43bb-917c-8f565605740a
 node_view(cluster_tree,5)
 
-# ╔═╡ 7a2b50ee-892c-45c6-b9f8-6abcab8aba8f
+# ╔═╡ acac1546-8735-453c-9fb9-beb9137c3b52
 dotplot(cluster_tree, 5, x = "CD163", y = "CD68")
 
-# ╔═╡ 68b5d2a4-b522-4c5e-a8a5-6f961c5ac385
+# ╔═╡ 31be140a-160f-4e0d-87c9-be95cd2096d1
 node_view(cluster_tree,10)
 
-# ╔═╡ bad92764-e411-4948-b7ce-c923ee8171b1
+# ╔═╡ 9b9b0363-1c6a-488d-ae06-e16c952bc08f
+dotplot(cluster_tree, 10, x = "CD163", y = "CD68")
+
+# ╔═╡ 24d3271c-2aa6-42c8-b5f7-0bc1e27e542e
 node_view(cluster_tree,21)
 
-# ╔═╡ 2a243057-f678-4bd9-80e9-c7571efb6abe
+# ╔═╡ 590fecc2-9363-4d46-ae2b-130db3459f3d
 node_view(cluster_tree,11)
 
-# ╔═╡ cd728e28-c89c-4c8a-a911-7c11605ef69d
-dotplot(cluster_tree,11, y ="CD66b", x ="CD68")
+# ╔═╡ f013f581-c535-4fe9-af03-44e4e1b78ad7
+dotplot(cluster_tree,11, y ="CD66b", x ="CD20")
 
-# ╔═╡ c2f767a7-de10-4bb6-a06c-f3036c3199bb
+# ╔═╡ c2a9e981-adaf-4996-80db-bc01a25ad0fe
 node_view(cluster_tree,23)
 
-# ╔═╡ bee52c29-8903-420d-a031-2bdb322b7373
+# ╔═╡ 31107080-6ab6-4607-b7f5-61d4867052a6
+dotplot(cluster_tree,2*23+1, x = "PDL1", y = "CD163")
+
+# ╔═╡ 196a7539-6256-4a0a-9dd6-b27fa788eaec
+node_view(cluster_tree,2*23+1)
+
+# ╔═╡ 90ab94fc-d0d5-4c43-8e5b-194480fd0867
 node_view(cluster_tree,46)
 
-# ╔═╡ 72a444a8-d620-46fc-97f2-6af44eee6583
+# ╔═╡ f4c5b223-1b22-405c-bf33-c0a6e08b55cf
 node_view(cluster_tree,92)
 
-# ╔═╡ e566fecc-0095-42f3-8668-f0c9a25a5572
+# ╔═╡ 279a6bd7-187e-4138-b6c3-ef539579048f
+dotplot(cluster_tree,92, x= "CD11b", y = "CD11c")
+
+# ╔═╡ b1f508cb-6189-41d4-b922-dfea8695ed04
 node_view(cluster_tree,185)
 
-# ╔═╡ a91c9fb7-461a-4aa7-8cd4-599702042438
+# ╔═╡ 647216a8-47ef-49cc-b5b0-962a05b00170
+node_view(cluster_tree,2*185)
+
+# ╔═╡ b2765aa8-ff53-4f60-8f49-25aa850e1699
 node_view(cluster_tree,371)
 
-# ╔═╡ 3a80f8c8-c901-4cb4-b253-e7972fef562d
+# ╔═╡ fed30b38-05dd-471c-8062-d91e24be7472
 node_view(cluster_tree,4)
 
-# ╔═╡ dcd5f1f4-deda-45ad-8d88-10545906c746
+# ╔═╡ 19c0a707-d216-4f29-af7d-60df842e9c42
 dotplot(cluster_tree,4, x = "CD8a", y = "CD4")
 
-# ╔═╡ b88973a7-1289-456a-a3f7-8ba92243084a
+# ╔═╡ a8697f05-6000-4559-8f43-e61d8b483856
 node_view(cluster_tree,9)
 
-# ╔═╡ 917286d4-edb5-48e3-8e03-ed6a38cb3cd8
+# ╔═╡ f4d58323-8a67-4965-928b-c87e59dce1ae
+dotplot(cluster_tree,9, x = "FOXP3", y = "CD4")
+
+# ╔═╡ 77f899a1-288f-4de9-aeb8-c97d209d2b97
 node_view(cluster_tree,19)
 
-# ╔═╡ 804fa862-acc4-4d92-88ff-cbbd9a155c26
-dotplot(cluster_tree,19, x = "FOXP3", y = "PDL1")
+# ╔═╡ 986eebeb-78ab-4610-86ca-49a81e1e643b
+dotplot(cluster_tree,19, x = "TIGIT", y = "PD1")
 
-# ╔═╡ 53b5721f-b2e8-457f-8f9f-c5e4c51e3cd4
+# ╔═╡ 2dfefaa6-5fe8-4e24-b38b-05f9a2c3b11f
 node_view(cluster_tree,8)
 
-# ╔═╡ 3ae0848f-17cb-429c-a498-caf824974804
-begin
-	children_8 	= ("CD8+","Bright")
-	scale_8	= Dict()
-	@bind lines_8 boundinglines(8, [3,27])
-end
+# ╔═╡ c0d7e01c-8549-45ef-9119-4900ac2cad22
+node_view(cluster_tree,16)
 
-# ╔═╡ 52652d53-3db8-4769-a68a-e3de8c5aa858
-begin
-	children_16 	= ("T(CD8+PD1+)","T(CD8+)")
-	scale_16	= Dict("PD1"=> 4, "TIM3"=>2,"CD45RO" => 3)
-	@bind lines_16 boundinglines(16, [1,10])
-end
+# ╔═╡ 7e253159-6b73-40c9-bcb7-bcfc53a376f2
+dotplot(cluster_tree,16, x = "TIGIT", y = "PD1")
 
 # ╔═╡ bbe9bd0f-9a7d-4972-9d3b-63a5fc648ad8
 md"""
@@ -2302,7 +2346,6 @@ version = "3.6.0+0"
 # ╟─70c9e039-7d20-4d35-9b05-5ae304c9525f
 # ╠═90a7d98c-25a1-4e34-bebb-718d2d22f231
 # ╠═d477d45b-2b25-4842-9e31-bd950c7021b8
-# ╠═72eb6dac-533f-43f0-97f0-def102d7d442
 # ╠═60d92fda-cb7c-4608-a33f-3fb513c9ee24
 # ╠═4bc494ef-71f4-4c7f-9567-9b84e737e374
 # ╟─fd06254f-0ee9-439b-ac88-2077140f1e40
@@ -2311,54 +2354,63 @@ version = "3.6.0+0"
 # ╠═b9955b07-6c13-4ad8-ad32-8857e2516cba
 # ╟─43d7251b-ed58-411e-a08d-27d7638ec185
 # ╠═aacb42c6-9c35-4647-b4fa-97e6693b923b
-# ╠═9f351f31-72a5-420e-acdf-e17da011fcdd
-# ╠═591b2c61-3ae3-4c70-9af5-6ef76fdfe611
-# ╟─b0a5bfb7-4fdf-4722-b71e-e26b24e2042e
-# ╠═1c906127-b043-49e0-ac16-bdef4764f119
-# ╠═7fbe6a16-6050-4e2d-9c8f-7e18ce960a69
-# ╠═da7dcf1c-0433-456e-9a6f-58c0f7e97db3
-# ╠═eba21afe-8fc6-49b7-a419-c06efd3f7a44
-# ╠═8749b389-7915-4b69-b9ba-b1688c2600c6
-# ╠═91e577f0-8b2c-4c44-9486-b04713366e30
-# ╠═e3567477-f45a-41ff-9254-88862b58ffc0
-# ╠═54cc0655-88cc-4ea6-b20d-898cc2f1a4f9
-# ╠═7a2b50ee-892c-45c6-b9f8-6abcab8aba8f
-# ╠═ef9b9ae2-8d52-4d16-af54-9c76b46dc4f1
-# ╠═911e29ef-bb39-46da-8d5f-7cfa06dca648
-# ╠═68b5d2a4-b522-4c5e-a8a5-6f961c5ac385
-# ╠═bad92764-e411-4948-b7ce-c923ee8171b1
-# ╠═bf37292c-572a-4f8e-a5a3-033729f97034
-# ╠═2a243057-f678-4bd9-80e9-c7571efb6abe
-# ╠═cd728e28-c89c-4c8a-a911-7c11605ef69d
-# ╠═f5b39dce-78f5-494b-a987-500d844c48df
-# ╠═c2f767a7-de10-4bb6-a06c-f3036c3199bb
-# ╟─9bb15c18-ca76-4bd6-871d-a14de6b81e9e
-# ╠═330a7d1e-38e4-4751-aaec-60f7d715f47b
-# ╠═bee52c29-8903-420d-a031-2bdb322b7373
-# ╠═26c6a861-caef-4705-9f56-49bcc045e820
-# ╠═72a444a8-d620-46fc-97f2-6af44eee6583
-# ╟─96ddb38d-262b-4d20-8a18-7731de14939b
-# ╠═e1144401-e3a9-457c-bc90-477eba83bfc1
-# ╟─022b6c87-15cc-41cc-92cd-da74c5a95170
-# ╠═31d2fdcd-7272-4c40-8c62-cb7596b58f94
-# ╠═e566fecc-0095-42f3-8668-f0c9a25a5572
-# ╠═986b6b97-c0a4-41ef-acdb-6583e71b041c
-# ╠═a91c9fb7-461a-4aa7-8cd4-599702042438
-# ╠═cbd58cc9-fdb5-4b42-9222-eedd01e7db42
-# ╠═7f6a63c5-560b-4921-94da-f81f58240224
-# ╠═3a80f8c8-c901-4cb4-b253-e7972fef562d
-# ╠═dcd5f1f4-deda-45ad-8d88-10545906c746
-# ╠═d7a8145a-96e5-4617-becb-dbb470d96164
-# ╠═b88973a7-1289-456a-a3f7-8ba92243084a
-# ╠═a6a50c9b-d509-4ca3-b1bd-5e8361130f74
-# ╠═fe1ed2f1-88ae-4c0f-b751-bf2628b3d328
-# ╠═917286d4-edb5-48e3-8e03-ed6a38cb3cd8
-# ╠═804fa862-acc4-4d92-88ff-cbbd9a155c26
-# ╠═3ae0848f-17cb-429c-a498-caf824974804
-# ╠═8e473995-0fb3-4a75-be53-6a2976e4e5c4
-# ╠═53b5721f-b2e8-457f-8f9f-c5e4c51e3cd4
-# ╟─f4ac3998-9cda-455e-a76c-b5a09dd9b450
-# ╠═52652d53-3db8-4769-a68a-e3de8c5aa858
+# ╠═37705f42-9270-4311-9637-042a1d234fea
+# ╠═6713b5ae-e6c0-4f24-8064-57d59ef2fbc2
+# ╟─d4d1adf6-edb4-4ca1-80dd-6f43793d05fb
+# ╠═f933e5c2-53bf-477d-ae86-2721fea1432c
+# ╠═75858fc1-845d-4a6e-89aa-9aa90afaa998
+# ╠═d10e5e98-cdd3-4f1f-8dce-0c1b66e2bf30
+# ╠═9c7e7636-1ce3-4e45-ba91-76a38f3159b1
+# ╠═3055799d-1c33-4f56-9072-b065fa46dac9
+# ╠═633c1e4e-a98d-415d-82a9-5c80e85a4b81
+# ╠═5e1de902-1ad0-4a35-a15e-5155d4218a4b
+# ╠═863cd9f6-e19a-43bb-917c-8f565605740a
+# ╠═acac1546-8735-453c-9fb9-beb9137c3b52
+# ╠═5702e224-41ad-4cdc-966c-7b093445d25d
+# ╠═04b8441a-e65a-4354-8b99-4dbbcf5f0a11
+# ╠═31be140a-160f-4e0d-87c9-be95cd2096d1
+# ╠═9b9b0363-1c6a-488d-ae06-e16c952bc08f
+# ╠═24d3271c-2aa6-42c8-b5f7-0bc1e27e542e
+# ╠═08b3b370-1e24-47a4-becb-ac021f9e2d35
+# ╠═590fecc2-9363-4d46-ae2b-130db3459f3d
+# ╠═f013f581-c535-4fe9-af03-44e4e1b78ad7
+# ╠═ae77f37d-9988-42ba-9ed3-962309f1b6d3
+# ╠═c2a9e981-adaf-4996-80db-bc01a25ad0fe
+# ╠═f3dcfa67-199f-40b9-bee5-9139cbea1658
+# ╠═31107080-6ab6-4607-b7f5-61d4867052a6
+# ╠═196a7539-6256-4a0a-9dd6-b27fa788eaec
+# ╠═dba74e01-bf22-4ab4-9755-a577b86b253c
+# ╠═2668a4ba-cf88-4f11-bac5-4b86751c6b3a
+# ╠═90ab94fc-d0d5-4c43-8e5b-194480fd0867
+# ╠═addd35ab-b645-4b30-9333-1a91fbf0374a
+# ╠═f4c5b223-1b22-405c-bf33-c0a6e08b55cf
+# ╠═279a6bd7-187e-4138-b6c3-ef539579048f
+# ╠═7ccffdd7-6265-4b8d-9591-f112f4086739
+# ╠═e86e1318-9865-4dff-bfa3-ac1d7b41ee0f
+# ╠═57b996f9-5fcf-456e-a49f-f9d7941de3f2
+# ╠═d61d7ad3-664c-47d6-82b2-29dfe50dbca2
+# ╠═b1f508cb-6189-41d4-b922-dfea8695ed04
+# ╠═d46b0dde-75ce-4348-ba06-5ea45f0a8421
+# ╠═647216a8-47ef-49cc-b5b0-962a05b00170
+# ╠═e9f48f02-a113-4899-8822-3d429bb4a0ef
+# ╠═b2765aa8-ff53-4f60-8f49-25aa850e1699
+# ╠═ccd68c48-ff14-41fd-ab73-09bd0e109d37
+# ╠═2de50595-7fd6-442a-9084-d7807cefe9f7
+# ╠═fed30b38-05dd-471c-8062-d91e24be7472
+# ╠═19c0a707-d216-4f29-af7d-60df842e9c42
+# ╠═7bdfe395-709c-4655-9286-b556f34cbcd3
+# ╠═a8697f05-6000-4559-8f43-e61d8b483856
+# ╠═f4d58323-8a67-4965-928b-c87e59dce1ae
+# ╠═1ffc1994-2e05-4e1d-94ea-01dceb8be6bc
+# ╠═3be9afef-461f-44bc-b077-331966f8f6bf
+# ╠═77f899a1-288f-4de9-aeb8-c97d209d2b97
+# ╠═986eebeb-78ab-4610-86ca-49a81e1e643b
+# ╠═dfc1c49e-cc79-4adc-bbe1-5e6e9c96a8f9
+# ╠═2dfefaa6-5fe8-4e24-b38b-05f9a2c3b11f
+# ╠═232c5db4-664a-4620-adef-a58882ed7226
+# ╠═abc61fdb-dbe2-465a-a5d1-9b2ad1dd5991
+# ╠═c0d7e01c-8549-45ef-9119-4900ac2cad22
+# ╠═7e253159-6b73-40c9-bcb7-bcfc53a376f2
 # ╠═e6e529e2-c892-4643-a39b-0ebc720fab03
 # ╠═bd95d563-48d1-409b-bff9-bdc4d253d82f
 # ╠═c5bd0c23-4eb2-4caf-b5b6-56a677e5f950
